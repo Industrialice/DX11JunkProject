@@ -1,0 +1,3738 @@
+[imp] starting 32-bit debug build
+[imp] SSE 2 or higher is used
+[imp] feature level 11 has been used
+[inf] ShadersManager::Create creating light_l1
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+	float3 N = normalize( mul( i_nor, WIT ) );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 1
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] ShadersManager::Create creating light_l2
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+	float3 N = normalize( mul( i_nor, WIT ) );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] ShadersManager::Create creating light_l16
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+	float3 N = normalize( mul( i_nor, WIT ) );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 16
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] ShadersManager::Create creating lightless
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 sampled = CMap.Sample( CMapSampler, i_tex );
+    sampled.rgb *= ExternalLightPower;
+    return sampled;
+}
+[inf] ShadersManager::Create creating lightless_glowing
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+SOutput PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 cmapSample = CMap.Sample( CMapSampler, i_tex );
+    cmapSample.rgb *= ExternalLightPower;
+    float4 gmapSample = GMap.Sample( GMapSampler, i_tex );
+	
+	SOutput op;
+	op.color0 = cmapSample;
+	op.color1 = gmapSample;
+	return op;
+}
+[inf] ShadersManager::Create creating lightless_texturless
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( float4 i_pos : POSITION, out float4 o_pos : SV_Position )
+{
+	o_pos = mul( i_pos, WVP );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+float4 PS( float4 posH : SV_Position ) : SV_Target
+{
+    return float4( AmbientMaterial * ExternalLightPower, 1 );
+}
+[inf] ShadersManager::Create creating lightless_discard
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 sampled = CMap.Sample( CMapSampler, i_tex );
+    if( sampled.a < 0.01 )
+    {
+        discard;
+    }
+    sampled.rgb *= ExternalLightPower;
+    return sampled;
+}
+[inf] ShadersManager::Create creating light_instanced
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 1
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, float3 i_wrow0 : W_ROW0, float3 i_wrow1 : W_ROW1, float3 i_wrow2 : W_ROW2, float3 i_wrow3 : W_ROW3, float4 wit_col0 : WIT_COL0, float4 wit_col1 : WIT_COL1, float4 wit_col2 : WIT_COL2, float4 wit_col3 : WIT_COL3, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+	row_major float4x4 o_w = float4x4( i_wrow0, 0,
+						               i_wrow1, 0,
+							           i_wrow2, 0,
+							           i_wrow3, 1 );
+	float4x4 o_wvp = mul( o_w, VP );
+	column_major float4x4 o_wit = float4x4( wit_col0.x, wit_col1.x, wit_col2.x, wit_col3.x,
+                                            wit_col0.y, wit_col1.y, wit_col2.y, wit_col3.y,
+                                            wit_col0.z, wit_col1.z, wit_col2.z, wit_col3.z,
+                                            wit_col0.w, wit_col1.w, wit_col2.w, wit_col3.w );
+	o_posW = mul( i_pos, o_w );
+	o_pos = mul( i_pos, o_wvp );
+    o_tex = i_tex;
+	float3 N = normalize( mul( i_nor, o_wit ) );
+	float3 T = normalize( mul( i_tan, (row_major float3x3)o_w ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 1
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		//float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+        float lightDistSquareInv = Lights[ light ].power * lightDist;
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	return float4( finColor, diffuse.a );
+}
+[inf] ShadersManager::Create creating light_matrix_so
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+void VS( float3 pos : LOCATION, float2 ampSpeedRange : AMPPARAMS, out float3 o_pos : LOCATION, out float2 o_ampSpeedRange : AMPPARAMS )
+{
+    if( ampSpeedRange.x < 0.f )
+    {
+        if( pos.y <= -ampSpeedRange.y )
+        {
+            float dif = ampSpeedRange.y - abs( pos.y );
+            pos.y += dif * 2.f;
+            ampSpeedRange.x = -ampSpeedRange.x;
+        }
+    }
+    else if( pos.y >= ampSpeedRange.y )
+    {
+        float dif = pos.y - ampSpeedRange.y;
+        pos.y -= dif * 2.f;
+        ampSpeedRange.x = -ampSpeedRange.x;
+    }
+    pos.y += ampSpeedRange.x * DT;
+
+    o_pos = pos;
+    o_ampSpeedRange = ampSpeedRange;
+}
+[inf] ShadersManager::Create creating light_matrix_so2
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+void VS( float3 pos : LOCATION, float2 ampSpeedRange : AMPPARAMS, out float3 o_pos : LOCATION, out float2 o_ampSpeedRange : AMPPARAMS )
+{
+    if( ampSpeedRange.x < 0.f )
+    {
+        if( pos.y <= -ampSpeedRange.y )
+        {
+            pos.y = ampSpeedRange.y;
+        }
+    }
+    else if( pos.y >= ampSpeedRange.y )
+    {
+        pos.y = -ampSpeedRange.y;
+    }
+    pos.y += ampSpeedRange.x * DT;
+
+    o_pos = pos;
+    o_ampSpeedRange = ampSpeedRange;
+}
+[inf] ShadersManager::Create creating light_matrix_renderer
+[imp] #TryToCompileShader compiling a new shader:
+/*cbuffer CubesData : register(b0)
+{
+    float4 W0 : packoffset(c0);
+    float4 W1 : packoffset(c1);
+    float4 W2 : packoffset(c2);
+    float3 WIT0 : packoffset(c3);
+    float3 WIT1 : packoffset(c4);
+    float3 WIT2 : packoffset(c5);
+}*/
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+/*void M3x3InverseTranspose4x3( out float3 orow0, out float3 orow1, out float3 orow2, float3 icol0, float3 icol1, float3 icol2 )
+{
+	orow0[0] = + (icol1[1] * icol2[2] - icol2[1] * icol1[2]);
+	orow0[1] = - (icol0[1] * icol2[2] - icol2[1] * icol0[2]);
+	orow0[2] = + (icol0[1] * icol1[2] - icol1[1] * icol0[2]);
+
+	orow1[0] = - (icol1[0] * icol2[2] - icol2[0] * icol1[2]);
+	orow1[1] = + (icol0[0] * icol2[2] - icol2[0] * icol0[2]);
+	orow1[2] = - (icol0[0] * icol1[2] - icol1[0] * icol0[2]);
+
+	orow2[0] = + (icol1[0] * icol2[1] - icol2[0] * icol1[1]);
+	orow2[1] = - (icol0[0] * icol2[1] - icol2[0] * icol0[1]);
+	orow2[2] = + (icol0[0] * icol1[1] - icol1[0] * icol0[1]);
+
+	float det = + icol0[0] * orow0[0] + icol1[0] * orow0[1] + icol2[0] * orow0[2];
+    float revDet = 1.f / det;
+
+    orow0 *= revDet;
+    orow1 *= revDet;
+    orow2 *= revDet;
+}*/
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, float3 pos : LOCATION, float2 ampSpeedRange : AMPPARAMS, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+    /*float4 w0 = W0;
+    float4 w1 = W1;
+    float4 w2 = W2;
+
+    w0.w += pos.x;
+    w1.w += pos.y;
+    w2.w += pos.z;
+        
+	o_posW = float3( dot( i_pos, w0 ), dot( i_pos, w1 ), dot( i_pos, w2 ) );
+
+    o_tex = i_tex;
+    float3 norProcd = float3( dot( i_nor, WIT0 ), dot( i_nor, WIT1 ), dot( i_nor, WIT2 ) );
+	float3 N = normalize( norProcd );
+	float3 T = normalize( float3( dot( i_tan, W0 ), dot( i_tan, W1 ), dot( i_tan, W2 ) ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+
+    o_pos = mul( float4( o_posW, 1 ), VP );*/
+
+    float4 wrows[ 3 ] = (float4[ 3 ])W;
+    float4 pos4 = float4( pos, 1 );
+
+    pos = mul( float4( pos, 1 ), WROT );
+
+    float4x3 w = W;
+    w[ 3 ][ 0 ] += pos.x;
+    w[ 3 ][ 1 ] += pos.y;
+    w[ 3 ][ 2 ] += pos.z;
+
+    o_posW = mul( i_pos, w );
+
+    o_tex = i_tex;
+    float3 norProcd = mul( i_nor, WIT );
+	float3 N = normalize( norProcd );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+
+    o_pos = mul( float4( o_posW, 1 ), VP );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+
+    //return diffuse;
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		//float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+        float lightDistSquareInv = Lights[ light ].power * lightDist;
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] ShadersManager::Create creating light_matrix_renderer2
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 pos : LOCATION, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+    float4 wrows[ 3 ] = (float4[ 3 ])W;
+    float4 pos4 = float4( pos, 1 );
+
+    pos = mul( float4( pos, 1 ), WROT );
+
+    float4x3 w = W;
+    w[ 3 ][ 0 ] += pos.x;
+    w[ 3 ][ 1 ] += pos.y;
+    w[ 3 ][ 2 ] += pos.z;
+
+    float3 posW = mul( i_pos, w );
+
+    o_pos = mul( float4( posW, 1 ), VP );
+
+    o_tex = i_tex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+SOutput PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial * ExternalLightPower;
+	float4 glowCol = GMap.Sample( GMapSampler, i_tex );
+	
+	SOutput op;
+	op.color0 = diffuse + glowCol;
+	op.color1 = glowCol;
+	return op;
+}
+[inf] ShadersManager::Create creating light_glowing
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x4 W : packoffset(c4);
+	float4x4 WIT : packoffset(c8);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( in float4 i_pos : POSITION0, in float2 i_tex : TEXCOORD0, in float3 i_nor : NORMAL0, in float3 i_tan : TANGENT0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : TEXCOORD1, out float3x3 o_TBN : TBN )
+{
+	o_posW = mul( i_pos, W ).xyz;
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+	float3 N = normalize( mul( i_nor, WIT ) );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 16
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D NMap : register(t1);
+SamplerState NMapSampler : register(s1);
+Texture2D SMap : register(t2);
+SamplerState SMapSampler : register(s2);
+Texture2D GMap : register(t3);
+SamplerState GMapSampler : register(s3);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : TEXCOORD1, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float3 texNormal = NMap.Sample( NMapSampler, i_tex ).xyz * 2.f - 1.f;
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float3 specCol = SMap.Sample( SMapSampler, i_tex ).rgb * SpecularMaterial.rgb;
+	float4 glowCol = GMap.Sample( GMapSampler, i_tex );
+	
+	float3 normal = normalize( mul( texNormal, i_TBN ) );
+	
+	float3 finDiffuse = 0;
+	float finSpecular = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW.xyz;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	
+		float3 v   = reflect( -toLight, normal );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finSpecular += spec;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb + finSpecular * specCol;
+	
+	SOutput op;
+	op.color0 = float4( finColor + glowCol, diffuse.a );
+	op.color1 = glowCol;
+	return op;
+}
+[inf] ShadersManager::Create creating glowing
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+void VS( in float4 i_pos : POSITION0, in float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	float4 glowCol = GMap.Sample( GMapSampler, i_tex );
+	
+	SOutput op;
+	op.color0 = diffuse;
+	op.color1 = glowCol;
+	return op;
+}
+[inf] ShadersManager::Create creating water
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot0 : packoffset(c0);
+	float2 TexRotCenter0 : packoffset(c0.z);
+	float2 TexOffset0 : packoffset(c1.z);
+	float2x2 Rot1 : packoffset(c2);
+	float2 TexRotCenter1 : packoffset(c2.z);
+	float2 TexOffset1 : packoffset(c3.z);
+}
+
+void VS( float4 i_pos : POSITION, float2 i_tex : TEXCOORD0, float3 i_nor : NORMAL0, float3 i_tan : TANGENT0, out float4 o_pos : SV_Position, out float4 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3x3 o_TBN : TBN )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	float2 tex0 = mul( i_tex - TexRotCenter0, Rot0 ) + TexOffset0;
+	float2 tex1 = mul( i_tex - TexRotCenter1, Rot1 ) + TexOffset1;
+	o_tex = float4( tex0, tex1 );
+	float3 N = normalize( mul( i_nor, WIT ) );
+	float3 T = normalize( mul( i_tan, (float3x3)W ) );
+	T = normalize( T - dot( T, N ) * N );
+	float3 B = cross( N, T );
+	o_TBN = float3x3( T, B, N );
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 16
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+Texture2D NMap0 : register(t0);
+SamplerState NMap0Sampler : register(s0);
+Texture2D NMap1 : register(t1);
+SamplerState NMap1Sampler : register(s1);
+
+float4 PS( float4 posH : SV_Position, float4 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3x3 i_TBN : TBN ) : SV_Target
+{
+	float3 toEye = normalize( EyePos - i_posW );
+	
+	float3 texnor0 = NMap0.Sample( NMap0Sampler, i_tex.xy ).xyz;
+	float3 texnor1 = NMap1.Sample( NMap1Sampler, i_tex.zw ).xyz;
+	float3 nor = normalize( (texnor0 + texnor1) - 1.f );
+	
+	float3 normal = normalize( mul( nor, i_TBN ) );
+	
+	float3 finColor = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW.xyz;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+	
+		float3 v   = reflect( -toLight, nor );
+		float spec = pow( saturate( dot( v, toEye ) ), 16.f );
+		spec *= lightDistSquareInv;
+		finColor += spec * Lights[ light ].col;
+	}
+	
+	finColor *= SpecularMaterial.rgb;
+	
+	return float4( finColor + DiffuseMaterial.rgb, DiffuseMaterial.a );
+}
+[inf] ShadersManager::Create creating flatter_noise
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float2x2 TexTransform : packoffset(c0.x);
+	float2 TexOffset : packoffset(c0.z);
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	o_tex = mul( o_tex, TexTransform ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float2 TexSizeF : packoffset(c0.x);
+	float NoiseScale : packoffset(c0.z);
+}
+
+Texture2D < uint > tMask : register(t0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	uint2 coords = (i_tex - floor(i_tex)) * TexSizeF;
+	
+	uint value = tMask.Load( uint3( coords, 0 ) );
+	if( coords.x % 2 )
+	{
+		value >>= 4;
+	}
+	else
+	{
+		value &= 0xF;
+	}
+	
+	return float4( 1, 1, 1, (float)value * NoiseScale );
+}
+[inf] ShadersManager::Create creating flatter_colorednoise
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float2x2 TexTransform : packoffset(c0.x);
+	float2 TexOffset : packoffset(c0.z);
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	o_tex = mul( o_tex, TexTransform ) + TexOffset;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float2 TexSizeF : packoffset(c0.x);
+	float NoiseScale : packoffset(c0.z);
+}
+
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{	
+	float4 color = Tex.Sample( Samp, i_tex );
+	color.a *= NoiseScale;
+	return color;
+}
+[inf] ShadersManager::Create creating flatter_empty
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf0
+{
+    float4 ScreenRect : packoffset( c0 );
+    float3x3 Transformation : packoffset( c1 );
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position )
+{
+    float2 v = float2( -0.5 + (id >> 1), -0.5 + (id & 1) );
+
+    v = mul( float3( v, 1 ), Transformation ).xy;
+
+    float x = ScreenRect[ id & 2 ];
+    float y = ScreenRect[ 3 >> (id & 1) ];
+
+    o_pos = float4( x, y, 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+float4 PS( float4 posH : SV_Position ) : SV_Target
+{
+	return float4( 1, 1, 1, 1 );
+}
+[inf] ShadersManager::Create creating flatter_blackwhite
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf0
+{
+    float4 ScreenRect : packoffset( c0 );
+    bool is_CutTexcoord : packoffset( c1 );
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+    float x = ScreenRect[ id & 2 ];
+    float y = ScreenRect[ 3 >> (id & 1) ];
+    if( is_CutTexcoord )
+    {
+        o_tex.x = x * 0.5f + 0.5f;
+        o_tex.y = -y * 0.5f + 0.5f;
+    }
+    else
+    {
+	    o_tex = float2( id >> 1, ~id & 1 );
+    }
+    o_pos = float4( x, y, 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer None : register(b0)
+{
+	float3 ColorLow : packoffset(c0.x);
+	float3 ColorHigh : packoffset(c1.x);
+};
+
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 color = Tex.Sample( Samp, i_tex );
+	if( color.r + color.g + color.b > 1.5f )
+	{
+		color.rgb = ColorHigh;
+	}
+	else
+	{
+		color.rgb = ColorLow;
+	}
+	return color;
+}
+[inf] ShadersManager::Create creating flatter_onlySample
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf0
+{
+    float4 ScreenRect : packoffset( c0 );
+    bool is_CutTexcoord : packoffset( c1 );
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+    float x = ScreenRect[ id & 2 ];
+    float y = ScreenRect[ 3 >> (id & 1) ];
+    if( is_CutTexcoord )
+    {
+        o_tex.x = x * 0.5f + 0.5f;
+        o_tex.y = -y * 0.5f + 0.5f;
+    }
+    else
+    {
+	    o_tex = float2( id >> 1, ~id & 1 );
+    }
+    o_pos = float4( x, y, 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	return Tex.Sample( Samp, i_tex );
+}
+[inf] ShadersManager::Create creating flatter_gray
+[imp] #TryToCompileShader compiling a new shader:
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 color = Tex.Sample( Samp, i_tex );
+	color.r = color.g = color.b = (color.r + color.g + color.b) / 3.f;
+	return color;
+}
+[inf] ShadersManager::Create creating flatter_grayFactor
+[imp] #TryToCompileShader compiling a new shader:
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer None : register(b0)
+{
+	uint Colors : packoffset(c0.x);
+}
+
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	float4 color = Tex.Sample( Samp, i_tex );
+	float factor = 1.f / Colors;
+	float scaled = (color.r + color.g + color.b) / 3.f;
+	scaled /= factor;
+	scaled = floor( scaled + 0.5f );
+	scaled *= factor;
+	color.r = color.g = color.b = scaled;
+	return color;
+}
+[inf] ShadersManager::Create creating flatter_color
+[imp] #TryToCompileShader compiling a new shader:
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position )
+{
+	o_pos = float4( float2( (id << 1) & 2, id & 2 ) * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf
+{
+    float4 ColorMult;
+}
+
+float4 PS( float4 posH : SV_Position ) : SV_Target
+{
+	return ColorMult;
+}
+[inf] ShadersManager::Create creating flatter_texture
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf0
+{
+    float4 ScreenRect : packoffset( c0 );
+	float2x2 TexMatrix : packoffset(c1);
+	float2 TexRotCenter : packoffset(c1.z);
+	float2 TexOffset : packoffset(c2.z);
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+    float2 tex = float2( id >> 1, ~id & 1 );
+	o_tex = mul( tex - TexRotCenter, TexMatrix ) + TexOffset;
+    o_pos = float4( ScreenRect[ id & 2 ], ScreenRect[ 3 >> (id & 1) ], 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Buf
+{
+    float4 ColorMult;
+}
+
+Texture2D < float4 > Tex : register(t0);
+SamplerState Samp : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+	return Tex.Sample( Samp, i_tex ) * ColorMult;
+}
+[inf] ShadersManager::Create creating flatter_bloom_final
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+}
+
+void VS( in uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0 )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float3 Amounts : packoffset(c0);
+}
+
+Texture2D CMap0 : register(t0);
+Texture2D CMap1 : register(t1);
+Texture2D CMap2 : register(t2);
+SamplerState Sampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0 ) : SV_Target
+{
+    float3 col0 = CMap0.Sample( Sampler, i_tex ).rgb * Amounts.x;
+    float3 col1 = CMap1.Sample( Sampler, i_tex ).rgb * Amounts.y;
+    float3 col2 = CMap2.Sample( Sampler, i_tex ).rgb * Amounts.z;
+	
+	float3 colSum = col0 + col1 + col2;
+	
+	/*if( colSum.r > 1.0 )
+	{
+		float dt = 1.0 - colSum.r;
+		colSum.g += dt / 2;
+		colSum.b += dt / 2;
+	}
+	if( colSum.g > 1.0 )
+	{
+		float dt = 1.0 - colSum.g;
+		colSum.b += dt;
+	}*/
+	
+    return float4( colSum, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_nothing
+[imp] #TryToCompileShader compiling a new shader:
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD )
+{
+	o_tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( o_tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, i_tex );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_horizontal_high
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 1.f
+#define KERNEL 40
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.07f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texy : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texy = tex.y;
+	
+	const float pixel = PIXEL_SIZE_X;
+	float offset = tex.x - KERNEL * pixel;
+	
+	float2 imm;
+	float x = -KERNEL;
+	[loop]
+	for( uint index = 0; index < KERNEL; x += 2.f, ++index )
+	{
+		float w0 = Gaussian( (x) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (x + 1) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 )
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		else
+		{
+			imm = float2( o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 40
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ KERNEL / 2 ] : DATAS, float texy : TEXCOORD ) : SV_Target0
+{	
+	float3 color = 0;
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( datas2[ index ].x, texy );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_horizontal_medium
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 8.5f
+#define DEVIATION 0.6f
+#define KERNEL 20
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.12f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texy : TEXCOORD )
+{
+	float2 datas2[ KERNEL ];
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	const float pixel = PIXEL_SIZE_X * 2;
+	float offset = tex.x - KERNEL * pixel;
+	[loop]
+	for( int index = -KERNEL; index < KERNEL; index += 2 )
+	{
+		float w0 = Gaussian( abs( index ) / DIVYL, DEVIATION );
+		float w1 = Gaussian( abs( index + 1 ) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		datas2[ (index + KERNEL) / 2 ].x = o01;
+		datas2[ (index + KERNEL) / 2 ].y = w01;
+		
+		offset += pixel * 2;
+	}
+	texy = tex.y;
+	datas = (float4[ KERNEL / 2 ])datas2;
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 20
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ KERNEL / 2 ] : DATAS, float texy : TEXCOORD ) : SV_Target0
+{	
+	float3 color = 0;
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( datas2[ index ].x, texy );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_horizontal_low
+[imp] #TryToCompileShader compiling a new shader:
+float Gimme( int index )
+{
+	const float scale = 0.5f;
+	static const float consts_basic[ 11 ] = { 0.5f, 0.45f, 0.41f, 0.35f, 0.3f, 0.24f, 0.15f, 0.1f, 0.05f, 0.02f, 0.01f };
+	static const float consts_using[ 20 ] =
+	{
+		consts_basic[ 10 ],
+		consts_basic[ 9 ],
+		consts_basic[ 8 ],
+		consts_basic[ 7 ],
+		consts_basic[ 6 ],
+		consts_basic[ 5 ],
+		consts_basic[ 4 ],
+		consts_basic[ 3 ],
+		consts_basic[ 2 ],
+		consts_basic[ 1 ],
+		consts_basic[ 0 ],
+		consts_basic[ 1 ],
+		consts_basic[ 2 ],
+		consts_basic[ 3 ],
+		consts_basic[ 4 ],
+		consts_basic[ 5 ],
+		consts_basic[ 6 ],
+		consts_basic[ 7 ],
+		consts_basic[ 8 ],
+		consts_basic[ 9 ]
+	};
+	return consts_using[ index ] * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ 5 ] : DATAS, out float texy : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texy = tex.y;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.x - 10 * pixel;
+	
+	float2 imm;
+	
+	[loop]
+	for( uint pixelIndex = 0; ; pixelIndex += 2 )
+	{
+		float w0 = Gimme( pixelIndex );
+		float w1 = Gimme( pixelIndex + 1 );
+		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o12 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( pixelIndex & 2 )
+		{
+			datas[ pixelIndex / 4 ] = float4( imm, o12, w01 );
+			if( pixelIndex == 18 )
+			{
+				break;
+			}
+		}
+		else
+		{
+			imm = float2( o12, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ 5 ] : DATAS, float texy : TEXCOORD ) : SV_Target0
+{	
+	float2 datas2[ 10 ] = (float2[ 10 ])datas;
+	float3 color = 0;
+	[unroll]
+	for( int index = 0; index < 10; ++index )
+	{
+		float3 sample = CMap.Sample( CMapSampler, float2( datas2[ index ].x, texy ) ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_vertical_high
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 13.f
+#define DEVIATION 2.75f
+#define KERNEL 48
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.235f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texx = tex.x;
+	
+	const float pixel = PIXEL_SIZE_X;
+	float offset = tex.y - KERNEL * pixel;
+	
+	float2 imm;
+	float y = -KERNEL;
+	[loop]
+	for( uint index = 0; index < KERNEL; y += 2.f, ++index )
+	{
+		float w0 = Gaussian( (y) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (y + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 )
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		else
+		{
+			imm = float2( o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 48
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ KERNEL / 2 ] : DATAS, float texx : TEXCOORD ) : SV_Target0
+{	
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	float3 color = 0;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( texx, datas2[ index ].x );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_vertical_medium
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 0.4f
+#define KERNEL 24
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.2f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 datas2[ KERNEL ];
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	const float pixel = PIXEL_SIZE_X * 2;
+	float offset = tex.y - KERNEL * pixel;
+	[loop]
+	for( int index = -KERNEL; index < KERNEL; index += 2 )
+	{
+		float w0 = Gaussian( abs( index ) / DIVYL, DEVIATION );
+		float w1 = Gaussian( abs( index + 1 ) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		datas2[ (index + KERNEL) / 2 ].x = o01;
+		datas2[ (index + KERNEL) / 2 ].y = w01;
+		
+		offset += pixel * 2;
+	}
+	texx = tex.x;
+	datas = (float4[ KERNEL / 2 ])datas2;
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 24
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ KERNEL / 2 ] : DATAS, in float texx : TEXCOORD ) : SV_Target0
+{	
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	float3 color = 0;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( texx, datas2[ index ].x );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_near_vertical_low
+[imp] #TryToCompileShader compiling a new shader:
+float Gimme( int index )
+{
+	const float scale = 0.2f;
+	static const float consts_basic[ 13 ] = { 0.7f, 0.65f, 0.5f, 0.4f, 0.325f, 0.26f, 0.21f, 0.175f, 0.15f, 0.135f, 0.12f, 0.095f, 0.075f };
+	static const float consts_using[ 24 ] =
+	{
+		consts_basic[ 12 ],
+		consts_basic[ 11 ],
+		consts_basic[ 10 ],
+		consts_basic[ 9 ],
+		consts_basic[ 8 ],
+		consts_basic[ 7 ],
+		consts_basic[ 6 ],
+		consts_basic[ 5 ],
+		consts_basic[ 4 ],
+		consts_basic[ 3 ],
+		consts_basic[ 2 ],
+		consts_basic[ 1 ],
+		consts_basic[ 0 ],
+		consts_basic[ 1 ],
+		consts_basic[ 2 ],
+		consts_basic[ 3 ],
+		consts_basic[ 4 ],
+		consts_basic[ 5 ],
+		consts_basic[ 6 ],
+		consts_basic[ 7 ],
+		consts_basic[ 8 ],
+		consts_basic[ 9 ],
+		consts_basic[ 10 ],
+		consts_basic[ 11 ],
+		//consts_basic[ 12 ]
+	};
+	return consts_using[ index ] * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ 6 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texx = tex.x;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.y - 12 * pixel;
+	
+	float2 imm;
+	
+	[loop]
+	for( uint pixelIndex = 0; ; pixelIndex += 2 )
+	{		
+		float w0 = Gimme( pixelIndex );
+		float w1 = Gimme( pixelIndex + 1 );
+		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o12 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( pixelIndex & 2 )
+		{
+			datas[ pixelIndex / 4 ] = float4( imm, o12, w01 );
+			if( pixelIndex == 22 )
+			{
+				break;
+			}
+		}
+		else
+		{
+			imm = float2( o12, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ 6 ] : DATAS, in float texx : TEXCOORD ) : SV_Target0
+{	
+	float2 datas2[ 12 ] = (float2[ 12 ])datas;
+	float3 color = 0;
+	[unroll]
+	for( int index = 0; index < 12; ++index )
+	{
+		float3 sample = CMap.Sample( CMapSampler, float2( texx, datas2[ index ].x ) ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_medium_horizontal_medium
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 1.2f
+#define KERNEL 40
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.085f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texy : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texy = tex.y;
+	
+	const float pixel = PIXEL_SIZE_X * 2;
+	float offset = tex.x - KERNEL * pixel;
+	
+	float2 imm;
+	float x = -KERNEL;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, x += 2.f )
+	{
+		float w0 = Gaussian( (x) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (x + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 )
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		else
+		{
+			imm = float2( o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 40
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ KERNEL / 2 ] : DATAS, in float texy : TEXCOORD ) : SV_Target
+{	
+	float3 color = 0;
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	[loop]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( datas2[ index ].x, texy );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_medium_horizontal_low
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 8.5f
+#define DEVIATION 0.7f
+#define KERNEL 20
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.145f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texy : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texy = tex.y;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.x - KERNEL * pixel;
+	
+	float2 imm;
+	float x = -KERNEL;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, x += 2.f )
+	{
+		float w0 = Gaussian( (x) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (x + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 == 0 )
+		{
+			imm = float2( o01, w01 );
+		}
+		else
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 20
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ KERNEL / 2 ] : DATAS, in float texy : TEXCOORD ) : SV_Target
+{	
+	float3 color = 0;
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( datas2[ index ].x, texy );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_medium_vertical_medium
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 2.5f
+#define KERNEL 48
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.23f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texx = tex.x;
+	
+	const float pixel = PIXEL_SIZE_X * 2;
+	float offset = tex.y - KERNEL * pixel;
+	
+	float2 imm;
+	float y = -KERNEL;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, y += 2.f )
+	{
+		float w0 = Gaussian( (y) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (y + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 )
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		else
+		{
+			imm = float2( o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 48
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ KERNEL / 2 ] : DATAS, in float texx : TEXCOORD ) : SV_Target
+{	
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	float3 color = 0;
+	[loop]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( texx, datas2[ index ].x );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_medium_vertical_low
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 0.4f
+#define KERNEL 24
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.23f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 datas[ KERNEL / 2 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texx = tex.x;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.y - KERNEL * pixel;
+	
+	float y = -KERNEL;
+	float2 imm;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, y += 2.f )
+	{
+		float w0 = Gaussian( (y) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (y + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 == 0 )
+		{
+			imm = float2( o01, w01 );
+		}
+		else
+		{
+			datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 24
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float4 datas[ KERNEL / 2 ] : DATAS, in float texx : TEXCOORD ) : SV_Target
+{	
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	float3 color = 0;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( texx, datas2[ index ].x );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_wide_horizontal_low
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 12.5f
+#define DEVIATION 1.4f
+#define KERNEL 40
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.1f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 o_datas[ KERNEL / 2 ] : DATAS, out float o_texy : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	o_texy = tex.y;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.x - KERNEL * pixel;
+	
+	float x = -KERNEL;
+	float2 imm;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, x += 2.f )
+	{	
+		float w0 = Gaussian( (x) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (x + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 == 0 )
+		{
+			imm = float2( o01, w01 );
+		}
+		else
+		{
+			o_datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		
+		offset += pixel * 2.f;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 40
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ KERNEL / 2 ] : DATAS, float texy : TEXCOORD ) : SV_Target
+{	
+	float3 color = 0;
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	[unroll]
+	for( int index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( datas2[ index ].x, texy );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating flatter_bloom_wide_vertical_low
+[imp] #TryToCompileShader compiling a new shader:
+#define DIVYL 15.f
+#define DEVIATION 1.5f
+#define KERNEL 48
+
+float Gaussian( float x, float deviation )
+{
+	const float scale = 0.2f;
+	return (1.f / sqrt(2.f * 3.141592f * deviation)) * exp(-((x * x) / (2.f * deviation))) * scale;
+}
+
+void VS( uint id : SV_VertexID, out float4 o_pos : SV_Position, out float4 o_datas[ KERNEL / 2 ] : DATAS, out float texx : TEXCOORD )
+{
+	float2 tex = float2( (id << 1) & 2, id & 2 );
+	o_pos = float4( tex * float2( 2, -2 ) + float2( -1, 1 ), 0, 1 );
+	texx = tex.x;
+	
+	const float pixel = PIXEL_SIZE_X * 4;
+	float offset = tex.y - KERNEL * pixel;
+	
+	float y = -KERNEL;
+	float2 imm;
+	[loop]
+	for( uint index = 0; index < KERNEL; ++index, y += 2.f )
+	{
+		float w0 = Gaussian( (y) / DIVYL, DEVIATION );
+		float w1 = Gaussian( (y + 1.f) / DIVYL, DEVIATION );		
+		float o0 = offset;
+		float o1 = offset + pixel;
+		float w01 = w0 + w1;
+		float o01 = (w0 * o0 + w1 * o1) / w01;
+		
+		if( index % 2 == 0 )
+		{
+			imm = float2( o01, w01 );
+		}
+		else
+		{
+			o_datas[ index / 2 ] = float4( imm, o01, w01 );
+		}
+		
+		offset += pixel * 2;
+	}
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define KERNEL 48
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float4 datas[ KERNEL / 2 ] : DATAS, float texx : TEXCOORD ) : SV_Target
+{	
+	float2 datas2[ KERNEL ] = (float2[ KERNEL ])datas;
+	float3 color = 0;
+	[unroll]
+	for( uint index = 0; index < KERNEL; ++index )
+	{
+		float2 tex = float2( texx, datas2[ index ].x );
+		float3 sample = CMap.Sample( CMapSampler, tex ).xyz;
+		color += sample * datas2[ index ].y;
+	}
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating particle_stream
+[imp] #TryToCompileShader compiling a new shader:
+struct SVsOut
+{
+	float3 pos : POSITION;
+	float4 speed : SPEEDSIZE;
+};
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+SVsOut VS( float3 i_pos : POSITION, float4 i_speednsize : SPEEDSIZE )
+{
+	SVsOut vertex;
+	vertex.pos = i_pos + i_speednsize.xyz * DT;
+	vertex.speed = i_speednsize;
+    vertex.speed.y -= 9.8f * DT;
+    const float range = 3000.f;
+    if( vertex.pos.x > range )
+    {
+        vertex.speed.x -= 10.f;
+    }
+    else if( vertex.pos.x < -range )
+    {
+        vertex.speed.x += 10.f;
+    }
+    if( vertex.pos.y < -range * 5 )
+    {
+        vertex.speed.y = abs( vertex.speed.y );
+    }
+    if( vertex.pos.z > range )
+    {
+        vertex.speed.z -= 10.f;
+    }
+    else if( vertex.pos.z < -range )
+    {
+        vertex.speed.z += 10.f;
+    }
+	return vertex;
+}
+[inf] ShadersManager::Create creating particle_stream_snow
+[imp] #TryToCompileShader compiling a new shader:
+struct SVsOut
+{
+	float3 pos : POSITION;
+};
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+SVsOut VS( float3 i_pos : POSITION, float4 i_speednsize : SPEEDSIZE )
+{
+	SVsOut vertex;
+	vertex.pos = i_pos + i_speednsize.xyz * DT;
+    const float range = 2000.f;
+    if( vertex.pos.x > range )
+    {
+        vertex.pos.x = -range;
+    }
+    else if( vertex.pos.x < -range )
+    {
+        vertex.pos.x = range;
+    }
+    if( vertex.pos.y < 0 )
+    {
+        vertex.pos.y = range;
+    }
+    if( vertex.pos.z > range )
+    {
+        vertex.pos.z = -range;
+    }
+    else if( vertex.pos.z < -range )
+    {
+        vertex.pos.z = range;
+    }
+	return vertex;
+}
+[inf] ShadersManager::Create creating particle_stream_fall
+[imp] #TryToCompileShader compiling a new shader:
+struct SVsOut
+{
+	float3 pos : POSITION;
+	float3 startPos : STARTPOSITION;
+    float2 lifeTime : LIFETIME;
+};
+
+cbuffer Data : register(b0)
+{
+    float4 BoxMin : packoffset(c15);
+    float4 BoxMax : packoffset(c16);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+SVsOut VS( float3 i_pos : POSITION, float3 startPos : STARTPOSITION, float2 lifeTime : LIFETIME, float4 i_speednsize : SPEEDSIZE )
+{
+	SVsOut vertex;
+
+    if( lifeTime.x >= lifeTime.y )
+    {
+        i_pos = startPos;
+        lifeTime.x = 0;
+    }
+    else
+    {
+        i_pos += i_speednsize.xyz * DT;
+        lifeTime.x += DT;
+    }
+
+    vertex.pos = i_pos;
+    vertex.startPos = startPos;
+    vertex.lifeTime = lifeTime;
+
+	return vertex;
+}
+[inf] ShadersManager::Create creating particle
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD0;
+};
+
+Buffer < float > tMask : register(t0);
+
+static const float2 Texcoords[ 6 ] =
+{
+	float2( 0.f, 1.f ),
+	float2( 0.f, 0.f ),
+	float2( 1.f, 0.f ),
+	float2( 1.f, 1.f ),
+	float2( 0.f, 1.f ),
+	float2( 1.f, 0.f )
+};
+
+SVsOut VS( uint vertexId : SV_VertexID )
+{
+	SVsOut vertex;
+	uint index = (3 + 3 + 2) * (vertexId / 6);
+	uint id = vertexId % 6;
+	float3 start_pos = float3( tMask[ index + 0 ], tMask[ index + 1 ], tMask[ index + 2 ] );
+	float2 start_size = float2( tMask[ index + 6 ], tMask[ index + 7 ] );
+	
+	float3 up = normalize( YVec );
+	float3 look = normalize( EyePos - start_pos );
+	float3 right = cross( up, look );
+	up = cross( look, right );
+	
+	float4x4 o_w = { right.x, right.y, right.z, 0.f,
+				     up.x, up.y, up.z, 0.f,
+					 look.x, look.y, look.z, 0.f,
+					 start_pos.x, start_pos.y, start_pos.z, 1.f };
+					 
+	//o_w = transpose( o_w );
+	//o_w *= VP;
+	
+	float2 o_pos;
+	if( id == 0 || id == 4 )
+	{
+		o_pos = float2( -0.5f, -0.5f );
+	}
+	else if( id == 1 )
+	{
+		o_pos = float2( -0.5f, 0.5f );
+	}
+	else if( id == 3 )
+	{
+		o_pos = float2( 0.5f, -0.5f );
+	}
+	else  //  if( id == 2 || id == 5 )
+	{
+		o_pos = float2( 0.5f, 0.5f );
+	}
+	
+	float4 o_wpos = mul( float4( o_pos * start_size, 0.f, 1.f ), o_w );
+	vertex.posH = mul( o_wpos, VP );
+	vertex.texCoord = Texcoords[ id ];
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, o_texCoord );
+}
+[inf] ShadersManager::Create creating particle_instanced
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float3 ppos : PPOSITION, float4 pspeednsize : PSPEEDSIZE )
+{
+	SVsOut vertex;
+
+    uint isize = asuint(pspeednsize.w);
+    float2 psize;
+    psize.x = asfloat((isize & 0xFFFF0000) >> 1);
+    psize.y = asfloat((isize & 0xFFFF) << 15);
+
+	float3 up = YVec;
+	float3 look = normalize( ppos - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             ppos.x, ppos.y, ppos.z );
+	
+    float3 wpos = mul( float4( pos * psize, 0.f, 1.f ), o_w );
+
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, o_texCoord );
+}
+[inf] ShadersManager::Create creating particle_instanced_glowing
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float3 ppos : PPOSITION, float4 pspeednsize : PSPEEDSIZE )
+{
+	SVsOut vertex;
+
+    uint isize = asuint(pspeednsize.w);
+    float2 psize;
+    psize.x = asfloat((isize & 0xFFFF0000) >> 1);
+    psize.y = asfloat((isize & 0xFFFF) << 15);
+
+	float3 up = YVec;
+	float3 look = normalize( ppos - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             ppos.x, ppos.y, ppos.z );
+	
+    float3 wpos = mul( float4( pos * psize, 0.f, 1.f ), o_w );
+
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	float4 dif = CMap.Sample( CMapSampler, o_texCoord );
+    float4 gmap = GMap.Sample( GMapSampler, o_texCoord );
+	
+	SOutput op;
+	op.color0 = dif;
+	op.color1 = gmap;
+	return op;
+}
+[inf] ShadersManager::Create creating particle_instanced_glowing_discard
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float3 ppos : PPOSITION, float4 pspeednsize : PSPEEDSIZE )
+{
+	SVsOut vertex;
+
+    uint isize = asuint(pspeednsize.w);
+    float2 psize;
+    psize.x = asfloat((isize & 0xFFFF0000) >> 1);
+    psize.y = asfloat((isize & 0xFFFF) << 15);
+
+	float3 up = YVec;
+	float3 look = normalize( ppos - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             ppos.x, ppos.y, ppos.z );
+	
+    float3 wpos = mul( float4( pos * psize, 0.f, 1.f ), o_w );
+
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+    if( o_texCoord.x > 1.f || o_texCoord.y > 1.f )
+    {
+        discard;
+    }
+
+	float4 dif = CMap.Sample( CMapSampler, o_texCoord );
+    float4 gmap = GMap.Sample( GMapSampler, o_texCoord );
+	
+	SOutput op;
+	op.color0 = dif;
+	op.color1 = gmap;
+	return op;
+}
+[inf] ShadersManager::Create creating particle_instanced_glowing_discard_lifetime
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float4 texCoord : TEXCOORD_AGE_DIE;
+    float4 color : PCOLOR;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float3 ppos : PPOSITION, float2 lifeTime : LIFETIME, float4 pspeednsize : PSPEEDSIZE, float4 pcolor : PCOLOR )
+{
+	SVsOut vertex;
+
+    uint isize = asuint(pspeednsize.w);
+    float2 psize;
+    psize.x = asfloat((isize & 0xFFFF0000) >> 1);
+    psize.y = asfloat((isize & 0xFFFF) << 15);
+
+    if( lifeTime.x < 1 )
+    {
+        psize.x *= lifeTime.x;
+        psize.y *= lifeTime.x;
+    }
+    else if( lifeTime.y - lifeTime.x < 1 )
+    {
+        psize.x *= lifeTime.y - lifeTime.x;
+        psize.y *= lifeTime.y - lifeTime.x;
+    }
+
+	float3 up = YVec;
+	float3 look = normalize( ppos.xyz - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             ppos.x, ppos.y, ppos.z );
+	
+    float3 wpos = mul( float4( pos * psize, 0.f, 1.f ), o_w );
+    
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+    vertex.texCoord = float4( texcoord, lifeTime );
+    vertex.color = pcolor;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float4 o_texCoord_age_die : TEXCOORD_AGE_DIE, float4 pcolor : PCOLOR ) : SV_Target
+{
+    if( o_texCoord_age_die.x > 1.f || o_texCoord_age_die.y > 1.f )
+    {
+        discard;
+    }
+
+	float4 dif = CMap.Sample( CMapSampler, o_texCoord_age_die.xy );
+    float4 gmap = GMap.Sample( GMapSampler, o_texCoord_age_die.xy );
+
+    if( o_texCoord_age_die.z < 1 )
+    {
+        dif.a *= o_texCoord_age_die.z;
+        gmap.a *= o_texCoord_age_die.z;
+    }
+    else if( o_texCoord_age_die.w - o_texCoord_age_die.z < 1 )
+    {
+        dif.a *= o_texCoord_age_die.w - o_texCoord_age_die.z;
+        gmap.a *= o_texCoord_age_die.w - o_texCoord_age_die.z;
+    }
+    
+    dif.rgb *= dif.a;
+    dif.a = 1.f;
+    gmap.rgb *= gmap.a;
+    gmap.a = 1.f;
+	
+	SOutput op;
+	op.color0 = dif * pcolor;
+	op.color1 = gmap * pcolor;
+	return op;
+}
+[inf] ShadersManager::Create creating particleTest
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 position : SV_Position;
+	float2 texCoord : TEXCOORD;
+    float4 color : COLOR;
+};
+
+struct Particle
+{
+	float3 position;
+	float currentSize;
+	float4 color;
+};
+
+StructuredBuffer < Particle > ParticleBuffer : register(t0);
+
+struct ParticleFrame
+{
+	float4x4 trans;
+};
+
+StructuredBuffer < ParticleFrame > ParticleBufferFrame : register(t1);
+
+SVsOut VS( uint vertexId : SV_VertexID )
+{
+	SVsOut outputVertex;
+	
+	uint index = vertexId / 3;
+    uint vertex = vertexId % 3;
+
+    float2 tex = float2( vertex >> 1, vertex & 1 );
+    float2 pos = float2( -0.5f, -0.5f ) + tex;
+	
+	float size = ParticleBuffer[ index ].currentSize;
+	float3 loc = ParticleBuffer[ index ].position + ParticleBufferFrame[ index ].trans[3].xyz;
+	float3 up = YVec;
+	float3 toCamera = normalize( EyePos - loc );
+	float3 right = cross( up, toCamera );
+    up = cross( toCamera, right );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             toCamera.x, toCamera.y, toCamera.z,
+				             loc.x, loc.y, loc.z );
+							 
+	float3 posW = mul( float4( pos * size, 0, 1 ), o_w );
+	
+	outputVertex.position = mul( float4( posW, 1 ), VP );
+    outputVertex.texCoord = tex;
+    outputVertex.color = ParticleBuffer[ index ].color;
+	
+	return outputVertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+struct SVsOut
+{
+	float4 position : SV_Position;
+	float2 texCoord : TEXCOORD;
+    float4 color : COLOR;
+};
+
+SOutput PS( SVsOut vertex ) : SV_Target
+{
+	float4 dif = CMap.Sample( CMapSampler, vertex.texCoord );
+	
+	SOutput op;
+	op.color1 = op.color0 = dif * vertex.color;
+	return op;
+}
+[inf] ShadersManager::Create creating particle_halo
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	nointerpolation float4 color : COLOR;
+	float2 texCoord : TEXCOORD;
+};
+
+Buffer < float > tMask : register(t0);
+
+static const float2 Texcoords[ 4 ] =
+{
+	float2( 0.f, 1.f ),
+	float2( 0.f, 0.f ),
+	float2( 1.f, 0.f ),
+	float2( 1.f, 1.f )
+};
+
+SVsOut VS( uint vertexId : SV_VertexID )
+{
+	SVsOut vertex;
+	uint index = (3 + 4 + 1) * (vertexId / 4);
+	uint id = vertexId % 4;
+	float3 start_pos = float3( tMask[ index + 0 ], tMask[ index + 1 ], tMask[ index + 2 ] );
+	float start_size = tMask[ index + 7 ];
+	
+	float3 up = normalize( YVec );
+	float3 look = normalize( start_pos - EyePos );
+	float3 right = cross( up, look );
+	up = cross( look, right );
+	
+	float4x4 o_w = { right.x, right.y, right.z, 0.f,
+				     up.x, up.y, up.z, 0.f,
+					 look.x, look.y, look.z, 0.f,
+					 start_pos.x, start_pos.y, start_pos.z, 1.f };
+					 
+	//o_w = transpose( o_w );
+	//o_w *= VP;
+	
+	float2 o_pos;
+	if( id == 0 )
+	{
+		o_pos = float2( -0.5f, -0.5f );
+	}
+	else if( id == 1 )
+	{
+		o_pos = float2( -0.5f, 0.5f );
+	}
+	else if( id == 3 )
+	{
+		o_pos = float2( 0.5f, -0.5f );
+	}
+	else  //  if( id == 2 || id == 5 )
+	{
+		o_pos = float2( 0.5f, 0.5f );
+	}
+	
+	float4 o_wpos = mul( float4( o_pos * start_size, 0.f, 1.f ), o_w );
+	vertex.posH = mul( o_wpos, VP );
+	vertex.color = float4( tMask[ index + 3 ], tMask[ index + 4 ], tMask[ index + 5 ], tMask[ index + 6 ] );
+	vertex.texCoord = Texcoords[ id ];
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+float4 PS( float4 posH : SV_Position, float4 i_color : COLOR, float2 i_texCoord : TEXCOORD ) : SV_Target
+{
+	float2 texCoord = i_texCoord;
+	float alpha = distance( texCoord, float2( 0.5f, 0.5f ) );
+	/*if( alpha > 0.5f )
+	{
+		discard();
+	}*/
+	float invDistWhite = saturate( 0.25f - alpha ) * 1.5f;
+	float invDistLight = saturate( 0.5f - alpha );
+	float3 color = i_color.rgb * i_color.a * invDistLight;
+	color += float3( invDistWhite, invDistWhite, invDistWhite );
+	return float4( color, 1.f );
+}
+[inf] ShadersManager::Create creating particle_new_halo
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b0)
+{
+    float4x4 EWM : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+void VS( float2 pos : POSITION, float2 tex : TEXCOORD, float3 loc : LOCATION, float rad : RADIUS, float4 col : COLOR, out float4 posT : SV_Position, out float2 o_tex : TEXCOORD, out nointerpolation float4 o_col : COLOR )
+{	
+    //loc = mul( float4( loc, 1.f ), EWM );
+
+	float3 up = YVec;
+	float3 look = normalize( loc - EyePos );
+	float3 right = cross( up, look );
+	//up = cross( look, right );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             loc.x, loc.y, loc.z );
+	
+    float3 wpos = mul( float4( pos * rad, 0.f, 1.f ), o_w );
+	posT = mul( float4( wpos, 1.f ), VP );
+	o_col = col;
+	o_tex = tex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD, nointerpolation float4 i_color : COLOR ) : SV_Target
+{
+	float alpha = distance( i_tex, float2( 0.5f, 0.5f ) );
+	/*if( alpha > 0.5f )
+	{
+		discard();
+	}*/
+	float invDistWhite = saturate( 0.25f - alpha ) * 1.5f;
+	float invDistLight = saturate( 0.5f - alpha );
+	float3 color = i_color.rgb * i_color.a * invDistLight;
+	color += float3( invDistWhite, invDistWhite, invDistWhite );
+
+    float4 outColor = float4( color, 1.f );
+    SOutput outColors = { outColor, outColor };
+    return outColors;
+}
+[inf] ShadersManager::Create creating particle_new_halo_intense
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b0)
+{
+    float4x4 EWM : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+void VS( float2 pos : POSITION, float2 tex : TEXCOORD, float3 loc : LOCATION, float rad : RADIUS, float4 col : COLOR, out float4 posT : SV_Position, out float2 o_tex : TEXCOORD, out nointerpolation float4 o_col : COLOR )
+{	
+    //loc = mul( float4( loc, 1.f ), EWM );
+
+	float3 up = YVec;
+	float3 look = normalize( loc - EyePos );
+	float3 right = cross( up, look );
+	//up = cross( look, right );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             loc.x, loc.y, loc.z );
+	
+    float3 wpos = mul( float4( pos * rad * 25, 0.f, 1.f ), o_w );
+	posT = mul( float4( wpos, 1.f ), VP );
+	o_col = col;
+	o_tex = tex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD, nointerpolation float4 i_color : COLOR ) : SV_Target
+{
+	float alpha = distance( i_tex, float2( 0.5f, 0.5f ) );
+    alpha = saturate( alpha * 2 );
+	/*if( alpha > 0.5f )
+	{
+		discard();
+	}*/
+	float3 color = i_color.rgb * i_color.a;
+	float invDistLight = 1.f - alpha;
+    invDistLight *= invDistLight * invDistLight;
+
+    return float4( color * invDistLight, 1.f );
+}
+[inf] ShadersManager::Create creating particle_new_ot_halo
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b0)
+{
+    float4x4 EWM : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+void VS( float2 pos : POSITION, float2 tex : TEXCOORD, float3 loc : LOCATION, float rad : RADIUS, out float4 posT : SV_Position, out float2 o_tex : TEXCOORD )
+{	
+    loc = mul( float4( loc, 1.f ), EWM );
+
+	float3 up = YVec;
+	float3 look = normalize( loc - EyePos );
+	float3 right = cross( up, look );
+	up = cross( look, right );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             loc.x, loc.y, loc.z );
+	
+    float3 wpos = mul( float4( pos * rad, 0.f, 1.f ), o_w );
+	posT = mul( float4( wpos, 1.f ), VP );
+	o_tex = tex;
+}
+[inf] ShadersManager::Create creating billboard
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD )
+{
+	SVsOut vertex;
+
+	float3 up = YVec;
+	float3 look = normalize( POS - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             POS.x, POS.y, POS.z );
+	
+    float3 wpos = mul( float4( pos.xy * SIZE.xy, 0.f, 1.f ), o_w );
+
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, o_texCoord );
+}
+[inf] ShadersManager::Create creating billboard_glowing
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD )
+{
+	SVsOut vertex;
+
+	float3 up = YVec;
+	float3 look = normalize( POS - EyePos );
+	float3 right = cross( up, look );
+	
+	float4x3 o_w = float4x3( right.x, right.y, right.z,
+				             up.x, up.y, up.z,
+				             0, 0, 0,
+				             POS.x, POS.y, POS.z );
+	
+    float3 wpos = mul( float4( pos.xy * SIZE.xy, 0.f, 1.f ), o_w );
+
+	vertex.posH = mul( float4( wpos, 1.f ), VP );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+Texture2D GMap : register(t1);
+SamplerState GMapSampler : register(s1);
+
+struct SOutput
+{
+	float4 color0 : SV_Target0;
+	float4 color1 : SV_Target1;
+};
+
+SOutput PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	float4 dif = CMap.Sample( CMapSampler, o_texCoord );
+    float4 gmap = GMap.Sample( GMapSampler, o_texCoord );
+	
+	SOutput op;
+	op.color0 = dif;
+	op.color1 = gmap;
+	return op;
+}
+[inf] ShadersManager::Create creating rect_shader
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float4 transform : TRANSFORM, float2 location : LOCATION )
+{
+	SVsOut vertex;
+
+    float2 newpos = float2( dot( pos.xy, transform.xz ), dot( pos.xy, transform.yw ) );
+    newpos += location;
+    newpos.x *= PIXEL_SIZE_X;
+    newpos.y *= PIXEL_SIZE_Y;
+
+	vertex.posH = float4( newpos, 0.f, 1.f );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, o_texCoord );
+}
+[inf] ShadersManager::Create creating circle_shader
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+	float4x4 P : packoffset(c8);
+}
+
+struct SVsOut
+{
+	float4 posH : SV_Position;
+	float2 texCoord : TEXCOORD;
+};
+
+SVsOut VS( float4 pos : POSITION, float2 texcoord : TEXCOORD, float2 ppos : LOCATION, float radius : RADIUS )
+{
+	SVsOut vertex;
+
+    float2 newpos = pos * radius;
+    newpos += ppos;
+
+	vertex.posH = mul( float4( newpos, 0.f, 1.f ), P );
+	vertex.texCoord = texcoord;
+	
+	return vertex;
+}
+[imp] #TryToCompileShader compiling a new shader:
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 o_texCoord : TEXCOORD0 ) : SV_Target
+{
+	return CMap.Sample( CMapSampler, o_texCoord );
+}
+[inf] ShadersManager::Create creating skybox
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+void VS( float4 i_pos : POSITION, out float4 o_pos : SV_Position, out float3 o_tex : TEXCOORD )
+{
+    i_pos = float4( mul( i_pos, W ), 1 );
+	o_pos = mul( i_pos, VP ).xyww;
+    o_tex = i_pos.xyz;
+}
+[imp] #TryToCompileShader compiling a new shader:
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+TextureCube CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, in float3 i_tex : TEXCOORD ) : SV_Target
+{
+	float4 sampled = CMap.Sample( CMapSampler, i_tex );
+    sampled.rgb *= ExternalLightPower;
+    return sampled;
+}
+[inf] ShadersManager::Create creating light_simple_l1
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float3 i_nor : NORMAL0, float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3 o_normal : NORMAL0 )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+    o_normal = i_nor;
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 1
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3 i_normal : NORMAL0 ) : SV_Target
+{
+    float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	
+	float3 normal = normalize( i_normal );
+	
+	float3 finDiffuse = 0;
+
+	[unroll]
+	for( int light_l2 = 0; light_l2 < LIGHTS_COUNT; ++light_l2 )
+	{
+		float3 toLight = Lights[ light_l2 ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light_l2 ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light_l2 ].col * mult;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] ShadersManager::Create creating light_simple_l2
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer Test : register(b0)
+{
+	float4x4 WVP : packoffset(c0);
+	float4x3 W : packoffset(c4);
+	float4x3 WROT : packoffset(c7);
+	float4x3 WIT : packoffset(c10);
+	float4 POS : packoffset(c13);
+	float4 SIZE : packoffset(c14);
+}
+
+cbuffer Mat : register(b1)
+{
+	float2x2 Rot : packoffset(c0);
+	float2 TexRotCenter : packoffset(c0.z);
+	float2 TexOffset : packoffset(c1.z);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+void VS( float4 i_pos : POSITION, float3 i_nor : NORMAL0, float2 i_tex : TEXCOORD0, out float4 o_pos : SV_Position, out float2 o_tex : TEXCOORD0, out float3 o_posW : POSITION, out float3 o_normal : NORMAL0 )
+{
+	o_posW = mul( i_pos, W );
+	o_pos = mul( i_pos, WVP );
+	o_tex = mul( i_tex - TexRotCenter, Rot ) + TexOffset;
+    o_normal = i_nor;
+}
+[imp] #TryToCompileShader compiling a new shader:
+#define LIGHTS_COUNT 2
+
+struct SLight
+{
+	float4 pos;
+	float3 col;
+	float power;
+};
+
+cbuffer ObjData : register(b1)
+{
+	float4 DiffuseMaterial : packoffset(c0);
+	float4 SpecularMaterial : packoffset(c1);
+    float3 AmbientMaterial : packoffset(c2);
+    float ExternalLightPower : packoffset(c2.w);
+}
+
+cbuffer LightData : register(b12)
+{
+	SLight Lights[ LIGHTS_COUNT ] : packoffset(c0);
+}
+
+cbuffer FrameData : register(b13)
+{
+	float3 EyePos : packoffset(c0);
+	float DT : packoffset(c0.w);
+	float4x4 VP : packoffset(c1);
+	float3 XVec : packoffset(c5);
+	float3 YVec : packoffset(c6);
+	float3 ZVec : packoffset(c7);
+}
+
+Texture2D CMap : register(t0);
+SamplerState CMapSampler : register(s0);
+
+float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : POSITION, float3 i_normal : NORMAL0 ) : SV_Target
+{
+    float3 toEye = normalize( EyePos.xyz - i_posW );
+	
+	float4 diffuse = CMap.Sample( CMapSampler, i_tex ) * DiffuseMaterial;
+	
+	float3 normal = normalize( i_normal );
+	
+	float3 finDiffuse = 0;
+
+	[unroll]
+	for( int light = 0; light < LIGHTS_COUNT; ++light )
+	{
+		float3 toLight = Lights[ light ].pos.xyz - i_posW;
+		float lightDist = 1.f / length( toLight );
+		toLight *= lightDist;
+		float lightDistSquareInv = saturate( Lights[ light ].power * (lightDist * lightDist) );
+		
+		float mult = saturate( dot( toLight, normal ) );
+		mult *= lightDistSquareInv;
+		finDiffuse += Lights[ light ].col * mult;
+	}
+	
+	float3 finColor = finDiffuse * diffuse.rgb;
+	
+	return float4( finColor + AmbientMaterial.rgb + diffuse.rgb * ExternalLightPower, diffuse.a );
+}
+[inf] VectorFieldFileLoader::Load -> vector fields file info:
+[inf] cells count 64 x 64 x 64
+[inf] bbox min -12 ; -12 ; -12
+[inf] bbox max 13 ; 13 ; 13
+[wrn] VectorFieldFileLoader::Load -> reading f64 version of the vector field file, consider recompression info f32
+[inf] VectorFieldFileLoader::Load -> finished loading vector fields file
+[imp] vector field file was loaded
+[imp] compiled whirl cs
+[imp] compiled travel cs
+[imp] compiled wind cs
+[imp] compiled vector field cs
+[imp] compiled erase frame data cs
+[imp] loading complete for 6.2307, shader loading time 2.8186 texture loading time 1.36692

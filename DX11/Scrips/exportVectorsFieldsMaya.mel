@@ -1,0 +1,181 @@
+// Copyright 1998-2016 EpicIndustrialice Games, Inc. All Rights Reserved.
+// Export velocity grid data from a Maya fluid container 
+// Description: Writes out velocity grid data in a custom formatted ascii file
+
+global proc gridExport(){
+
+    //Check to see if the UI window already exists. If it does, it is deleted
+	if(`window -exists gridExport`){
+		
+		deleteUI -window gridExport;
+	}
+	//Create new UI Window
+	window -t "gridExport" -rtf 1 -widthHeight 300 300 gridExport;
+	columnLayout rootLayout;
+	frameLayout -labelVisible false -marginWidth 5 -marginHeight 5 ;
+	columnLayout verticalSubframe;
+			
+	setParent ..;
+	text -label "Industrialice Vector Field Exporter";
+	radioButtonGrp -numberOfRadioButtons 2 -label "Export Mode"
+	    -labelArray2 "Single Frame" "Sequence"
+	    -select 1
+	    -onCommand1 "intFieldGrp -edit -enable 0 endFrame;"
+	    -onCommand2 "intFieldGrp -edit -enable 1 endFrame;"
+	myRadBtnGrp;
+	checkBoxGrp - l "Cached Fluid?" -v1 0 isCached;
+	intFieldGrp -l "Start Frame" startFrame;
+	intFieldGrp -l "End Frame"  -enable 0 -v1 3 endFrame;
+	//intFieldGrp -l "Increment" -enable 0 -v1 1 increment;
+	textFieldGrp -l "Path"  -text "D:\\Projects\\DX11\\DX11\\VectorFields\\" folderPath;
+	textFieldGrp -l "Filename prefix" -text "vecField" filename;	
+	columnLayout  -columnAttach "both" 0 -adjustableColumn true exportButton;
+	    button -l "export" -c "iterateExport";
+	
+	showWindow gridExport;
+}
+
+global proc iterateExport(){
+    
+    int $startFrame = `intFieldGrp -q -v1 startFrame`;
+	int $endFrame = `intFieldGrp -q -v1 endFrame`;
+	//int $increment = `intFieldGrp -q -v1 increment`;
+	string $dataName[] =  {"velocity"};
+    int $n = $startFrame;
+    
+    string $sel[] = `ls -sl`;
+    
+    if (size($sel)>1 || size($sel)<1){
+		
+		print("ERROR: Please select a single fluid container \n");
+		
+	} else {
+
+	    string $fluidShape[] = `listRelatives -s $sel[0]`;
+	    string $objectCheck = `objectType $fluidShape[0]`;
+	   
+	    if ($objectCheck == "fluidShape") {	       
+            
+            int $doit = `checkBoxGrp -q -v1 isCached`;
+            print $doit;
+             
+             if ($doit == 0 ) {
+                          
+                 int $sceneCurTime = `currentTime -q`;
+                 int $sceneMinTime = `playbackOptions -q -minTime`;
+                 if ($sceneCurTime > $startFrame) {
+                     
+                     currentTime $sceneMinTime;
+                     runupToStart($sceneMinTime, $startFrame);             
+                 
+                 } else {
+                 
+                     if ($sceneCurTime < $startFrame) {
+                         runupToStart($sceneCurTime, $startFrame);
+                     }
+                 }
+            }
+            
+            if (`radioButtonGrp -q -select myRadBtnGrp` == 1) {
+        	    
+        	    currentTime $n;
+		        string $folder = `textFieldGrp -q -text folderPath`;
+		        string $filename = `textFieldGrp -q -text filename`;
+		        string $filePath = $folder +"\\"+ $filename + "." + $n + ".ivf";
+		        print ("Wrote: " + $filePath + "\n");		        
+     		    dataExport($dataName[0],$filePath, $fluidShape[0]);
+		   
+            } else {
+
+		          for($n = $startFrame; $n < ($endFrame+1); $n++){
+			     
+			         currentTime $n;
+			         string $folder = `textFieldGrp -q -text folderPath`;
+			         string $filename = `textFieldGrp -q -text filename`;
+			         string $filePath = $folder +"\\"+ $filename + "." + $n + ".ivf";
+			         print ("Wrote: " + $filePath + "\n");
+			         dataExport($dataName[0],$filePath,$fluidShape[0]);	
+			     
+			       }
+		     }
+      
+         } else {
+             
+             print("ERROR: Please select a fluid container \n");
+        
+         }
+    }
+}
+
+global proc dataExport(string $dataName, string $filePath, string $myfluidShape){
+		
+	int $voxCount = 0;
+		
+	//Grab the Grid resolution
+	float $res[] = `eval("getAttr " + $myfluidShape + ".res")`;
+	
+	//switch back to parent transform
+	string $fluidShapeParent[] = `listRelatives -p $myfluidShape`;
+
+	//Grab the voxel container bounding box
+	float $bb[] = `xform -q -ws -bb $fluidShapeParent[0]`;
+
+    //create and open the output file in write mode
+	int $fileId=`fopen $filePath "w"`;
+	
+	//file format identificator
+	fprint $fileId ("IVFFF");
+	
+	//magic number
+	fwrite $fileId ((int)-87106643); // 0xFACEDBAD
+	
+	//version( int, currently 0 )
+	fwrite $fileId ((int)0);
+	
+	//Write voxel res( cells count )
+	fwrite $fileId ((int)$res[0]);
+	fwrite $fileId ((int)$res[1]);
+	fwrite $fileId ((int)$res[2]);
+	
+	//Write bounding Box info
+	//min x;y;z
+	fwrite $fileId ($bb[0]);
+	fwrite $fileId ($bb[1]);
+	fwrite $fileId ($bb[2]);
+	//max x;y;z
+	fwrite $fileId ($bb[3]);
+	fwrite $fileId ($bb[4]);
+	fwrite $fileId ($bb[5]);
+
+    int $x = 0;
+	int $y = 0;
+	int $z = 0;
+	
+	for($z = 0; $z < $res[2]; $z++){
+	   
+	    for($y = 0; $y < $res[1]; $y++){
+	        
+	        for($x = 0; $x < $res[0]; $x++){
+
+		        float $v[] = `getFluidAttr -at $dataName -xi $x -yi $y -zi $z`;	
+ 
+              	fwrite $fileId $v[0];
+              	fwrite $fileId $v[1];
+              	fwrite $fileId $v[2];
+    
+	        }
+	    }
+	}
+	
+	fclose $fileId;
+}
+
+global proc runupToStart(int $baseframe, int $exportFirstFrame) {
+    int $i;
+    for ($i = $baseframe; $i < $exportFirstFrame; $i++) {
+	    //print($i+"...\n");
+	    currentTime $i;
+    }
+}
+
+gridExport();
