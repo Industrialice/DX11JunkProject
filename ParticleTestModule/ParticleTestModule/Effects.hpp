@@ -44,7 +44,34 @@ struct Vec3WithRand
 {
 	vec3 data;
 	vec3 offsetMin, offsetMax;
+	f32 scale;
 };
+
+static f32 ExpRand( f32 from, f32 to )
+{
+	if( to == from )
+	{
+		return to;
+	}
+	f32 diff = to - from;
+	f32 center = diff * 0.5f;
+	f32 r = Funcs::RandomRangeF32( from, to );
+	f32 dist = abs( r - center ) / center;
+	r = Funcs::RandomFluctuateF32( center, 1.f / exp( dist ) * center );
+	return r;
+}
+
+static vec3 GetDataWithExpRand( const Vec3WithRand &input )
+{
+	f32 rx = ExpRand( input.offsetMin.x * input.scale, input.offsetMax.x * input.scale );
+	f32 ry = ExpRand( input.offsetMin.y * input.scale, input.offsetMax.y * input.scale );
+	f32 rz = ExpRand( input.offsetMin.z * input.scale, input.offsetMax.z * input.scale );
+
+	return vec3( 
+		input.data.x * input.scale + rx,
+		input.data.y * input.scale + ry,
+		input.data.z * input.scale + rz );
+}
 
 class WhirlEffect final : public UniformInterface
 {
@@ -53,37 +80,11 @@ class WhirlEffect final : public UniformInterface
 public:
 	struct WhirlData
 	{
-		Vec3WithRand rotVec = { vec3( 0, 0, 0 ), vec3( 0 ), vec3( 0 ) }; // вектор закрутки, определяет радиус вращения
-		Vec3WithRand rotSpeeds = { vec3( 0 ), vec3( 0 ), vec3( 0 ) }; // скорость вращения
-		Vec3WithRand curRot = { vec3( 0 ), vec3( 0 ), vec3( 0 ) }; // текущее вращение
+		Vec3WithRand rotVec = { vec3( 0, 0, 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // вектор закрутки, определяет радиус вращения
+		Vec3WithRand rotSpeeds = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // скорость вращения
+		Vec3WithRand curRot = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // текущее вращение
 		CStr effectName;
 	};
-
-	static f32 ExpRand( f32 from, f32 to )
-	{
-		if( to == from )
-		{
-			return to;
-		}
-		f32 diff = to - from;
-		f32 center = diff * 0.5f;
-		f32 r = Funcs::RandomRangeF32( from, to );
-		f32 dist = abs( r - center ) / center;
-		r = Funcs::RandomFluctuateF32( center, 1.f / exp( dist ) * center );
-		return r;
-	}
-
-	static vec3 GetDataWithRand( const Vec3WithRand &input )
-	{
-		f32 rx = ExpRand( input.offsetMin.x, input.offsetMax.x );
-		f32 ry = ExpRand( input.offsetMin.y, input.offsetMax.y );
-		f32 rz = ExpRand( input.offsetMin.z, input.offsetMax.z );
-
-		return vec3( 
-			input.data.x + rx,
-			input.data.y + ry,
-			input.data.z + rz );
-	}
 	
 	WhirlEffect( const std::shared_ptr < ID3D11ComputeShader > &computeShader, const WhirlData &data, ui32 particlesCount ) : UniformInterface( computeShader )
 	{
@@ -101,9 +102,9 @@ public:
 
 		for( ui32 particle = 0; particle < particlesCount; ++particle )
 		{
-			pdata[ particle ].rotVec = GetDataWithRand( data.rotVec );
-			pdata[ particle ].curRot = GetDataWithRand( data.curRot );
-			pdata[ particle ].rotSpeeds = GetDataWithRand( data.rotSpeeds );
+			pdata[ particle ].rotVec = GetDataWithExpRand( data.rotVec );
+			pdata[ particle ].curRot = GetDataWithExpRand( data.curRot );
+			pdata[ particle ].rotSpeeds = GetDataWithExpRand( data.rotSpeeds );
 		}
 
 		CreateBuf( particlesCount, sizeof(SWhirlData), pdata, uav.AddrModifiable() );
@@ -147,28 +148,6 @@ public:
 		CStr effectName;
 	};
 
-	static f32 ExpRand( f32 from, f32 to )
-	{
-		if( to == from )
-		{
-			return to;
-		}
-		f32 diff = to - from;
-		f32 center = diff * 0.5f;
-		f32 r = Funcs::RandomRangeF32( from, to );
-		f32 dist = abs( r - center ) / center;
-		r += Funcs::RandomFluctuateF32( center, 1.f / exp( dist ) * center );
-		return r;
-	}
-
-	static vec3 GetDataWithRand( const Vec3WithRand &input )
-	{
-		return vec3( 
-			input.data.x + ExpRand( input.offsetMin.x, input.offsetMax.x ),
-			input.data.y + ExpRand( input.offsetMin.y, input.offsetMax.y ),
-			input.data.z + ExpRand( input.offsetMin.z, input.offsetMax.z ) );
-	}
-
 	TravelEffect( const std::shared_ptr < ID3D11ComputeShader > &computeShader, const TravelData &data, ui32 particlesCount ) : UniformInterface( computeShader )
 	{
 		struct STravelData
@@ -183,8 +162,8 @@ public:
 
 		for( ui32 particle = 0; particle < particlesCount; ++particle )
 		{
-			pdata[ particle ].position = GetDataWithRand( data.startPosition );
-			pdata[ particle ].direction = GetDataWithRand( data.direction );
+			pdata[ particle ].position = GetDataWithExpRand( data.startPosition );
+			pdata[ particle ].direction = GetDataWithExpRand( data.direction );
 		}
 
 		CreateBuf( particlesCount, sizeof(STravelData), pdata, uav.AddrModifiable() );
@@ -325,6 +304,8 @@ public:
 		f32 strength; // множитель для сил вектор филда, чем больше, тем больше влияние сил на частицы, 0 - нет эффекта
 		f32 strictness; // строгость следования частиц силам из вектор филда, 0 - нет влияния, 1 - частицы строго следуют в направлении сил
 		vec3 directionAddition; // дополнительный вектор для сил в вектор филде, прибавляется к векторам всех сил, может пригодиться для задания рандомности
+		f32 dragTarget, dragFluctuation; // сопротивление "воздуха", чем больше значение, тем быстрее торможение частиц
+		Vec3WithRand velocityMults = { vec3( 1, 1, 1 ), vec3( 0, 0, 0 ), vec3( 0, 0, 0 ), 1.0f }; // домножение скорости частиц, нужен для рандомности
 		
 		ID3D11ShaderResourceView *srv;
 		ID3D11SamplerState *sampler;
@@ -347,8 +328,8 @@ public:
 		{
 			pdata[ particle ].velocity = vec3( 0, 0, 0 ); // текущая скорость частицы
 			//pdata[ particle ].drag = Funcs::RandomRangeF32( 0.25f, 2.0f );
-			pdata[ particle ].drag = 0.1; // сопротивление "воздуха", чем больше значение, тем быстрее торможение частиц
-			pdata[ particle ].velocityMults = vec3( 0.25, Funcs::RandomRangeF32( 0.85, 1 ), 0.25 ); // домножение скорости частиц, нужен для рандомности
+			pdata[ particle ].drag = Funcs::RandomFluctuateF32( data.dragTarget, data.dragFluctuation );
+			pdata[ particle ].velocityMults = GetDataWithExpRand( data.velocityMults );
 		}
 
 		CreateBuf( particlesCount, sizeof(SVectorFieldParticleData), pdata, _uav.AddrModifiable() );

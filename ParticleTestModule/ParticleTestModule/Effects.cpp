@@ -112,6 +112,8 @@ void FilloutEffects()
 		WhirlEffect::WhirlData data;
 		data.rotVec.data = vec3( 0, 0.25, 1 );
 		data.rotVec.offsetMin = vec3( -0.02, -0.02, -0.15 );
+		LiceMath::Vec3ScaleInplace( &data.rotVec.offsetMin, 0.1f );
+		LiceMath::Vec3ScaleInplace( &data.rotVec.offsetMax, 0.1f );
 		data.rotVec.offsetMax = vec3( 0.02, 0.02, 0.15 );
 		data.rotSpeeds.data = vec3( 0, 0.25, 0 );
 		data.rotSpeeds.offsetMin = vec3( 0, 0, 0 );
@@ -119,6 +121,8 @@ void FilloutEffects()
 		data.curRot.data = vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 );
 		data.curRot.offsetMin = vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 );
 		data.curRot.offsetMax = vec3( 0, Funcs::RandomRangeF32( f32_pi / 2, f32_pi ), 0 );
+		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMin, 0.25f );
+		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMax, 0.25f );
 		return data;
 	};
 	AddEffect < WhirlEffect, WhirlEffect::WhirlData >( "whirl_global", whirlGlobal, whirlCS );
@@ -129,11 +133,13 @@ void FilloutEffects()
 		data.rotVec.data = vec3( 0, 0.01, 0 );
 		data.rotVec.offsetMin = vec3( -0.005, -0.005, -0.005 );
 		data.rotVec.offsetMax = vec3( 0.005, 0.005, 0.005 );
+		data.rotVec.scale = 0.1f;
 		data.rotSpeeds.data = vec3( 0, 0, 1 );
 		data.rotSpeeds.offsetMin = vec3( -0.25, -0.25, -0.25 );
 		data.rotSpeeds.offsetMax = vec3( 0.25, 0.25, 0.25 );
 		data.curRot.offsetMin = vec3( 0, 0, -f32_pi );
 		data.curRot.offsetMax = vec3( 0, 0, f32_pi );
+		data.curRot.scale = 0.1f;
 		return data;
 	};
 	AddEffect < WhirlEffect, WhirlEffect::WhirlData >( "whirl_local", whirlLocal, whirlCS );
@@ -142,13 +148,13 @@ void FilloutEffects()
 	{
 		WindEffect::WindData data;
 		data.position = vec3( 0, 0, 0 );
-		data.direction = vec3( 0.1, 1, 0.1 );
+		data.direction = vec3( 1, 1, 1 );
 		LiceMath::Vec3NormalizeInplace( &data.direction );
-		data.minForce = 2.5f;
-		data.maxForce = 13.5;
+		data.minForce = 0.5f;
+		data.maxForce = 3.5;
 		data.minDelta = 1;
 		data.maxDelta = 5;
-		data.concentration = 1.7;
+		data.concentration = 0.7;
 		return data;
 	};
 	AddEffect < WindEffect, WindEffect::WindData >( "wind_test", windTest, windCS );
@@ -175,12 +181,15 @@ void FilloutEffects()
 		data.position = vec3( 0, 0, 0 );
 		data.scale = vec3( 4, 2, 4 );
 		data.rotation = vec3( Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ) );
-		data.rotationSpeed = vec3( 0.1, 0.25, 0.1 );
-		data.strength = 0.04;
+		data.rotationSpeed = vec3( 0.1, 0.25, 0.01 );
+		data.strength = 0.025;
 		data.strictness = 0;
 		data.srv = VectorFieldSRV;
 		data.sampler = VectorFieldSamplerState;
 		data.directionAddition = vec3( 0, 0, 0 );
+		data.dragTarget = 0.1f;
+		data.dragFluctuation = 0.0f;
+		data.velocityMults.data = vec3( 1, 1, 1 );
 		return data;
 	};
 	AddEffect < VectorFieldEffect, VectorFieldEffect::VectorFieldData >( "vector_field_test", vectorFieldTest, vectorFieldCS );

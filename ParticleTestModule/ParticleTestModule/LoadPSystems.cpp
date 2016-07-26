@@ -3,7 +3,7 @@
 
 void ParticleTest::LoadPSystems()
 {	
-	auto addPSystem = [this]( ui32 count, const vec3 basicPosition, f32 targetSize, f32 sizeFluctuation, std::initializer_list < const char * > effects )
+	auto addPSystem = [this]( ui32 count, const vec3 basicPosition, f32 targetSize, f32 sizeFluctuation, const f128color &color, std::initializer_list < const char * > effects )
 	{
 		ASSUME( count % 64 == 0 );
 
@@ -11,7 +11,7 @@ void ParticleTest::LoadPSystems()
 		for( ui32 index = 0; index < count; ++index )
 		{
 			p0[ index ].position = basicPosition;
-			p0[ index ].color = f128color( Funcs::RandomFluctuateF32( 0.25, 0.1 ), Funcs::RandomFluctuateF32( 0.4, 0.1 ), 1, 1 );
+			p0[ index ].color = color;
 			//p0[ index ].size = Funcs::RandomRangeF32( 0.15, 0.05 );
 			p0[ index ].size = Funcs::RandomFluctuateF32( targetSize, sizeFluctuation );
 		}
@@ -42,9 +42,11 @@ void ParticleTest::LoadPSystems()
 		_particlesCount += count;
 	};
 
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	f32 addition = -0.5f;
 
-	for( ui32 index = 0; index < 45; ++index )
+	for( ui32 index = 0; index < 150; ++index )
 	{
 		vec3 addPos;
 		LiceMath::Vec3Addition( &addPos, &_o_pos, &vec3( 0, addition, 0 ) );
@@ -55,10 +57,20 @@ void ParticleTest::LoadPSystems()
 		auto windTestData = EffectsMap[ "wind_test" ]->CreateData < WindEffect::WindData >();
 
 		LiceMath::Vec3Addition( &vectorFieldTestData->position, &addPos, &vec3( 0, 0, 0 ) );
-		LiceMath::Vec3Addition( &windTestData->position, &addPos, &vec3( 0, -1, 0 ) );
+		LiceMath::Vec3Addition( &windTestData->position, &addPos, &vec3( 0, 0, 0 ) );
 
-		addPSystem( 512, addPos, 0.012, 0.005, { "whirl_global", "whirl_local", "wind_test", "vector_field_test" } );
+		f128color color;
+		if( index % 2 == 0 )
+		{
+			color = f128color( Funcs::RandomFluctuateF32( 0.25, 0.1 ), Funcs::RandomFluctuateF32( 0.4, 0.1 ), 1, 1 );
+		}
+		else
+		{
+			color = f128color( Funcs::RandomFluctuateF32( 1.0f, 0.1f ), Funcs::RandomFluctuateF32( 0.1, 0.1 ), Funcs::RandomFluctuateF32( 0.1, 0.1 ), 1.0f );
+		}
 
-		addition += 0.025f;
+		addPSystem( 256, addPos, 0.01, 0.005, color, { "whirl_global", /*"whirl_local", "wind_test", */"vector_field_test" } );
+
+		addition += 0.0025f;
 	}
 }
