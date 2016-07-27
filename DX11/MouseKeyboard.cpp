@@ -3,13 +3,16 @@
 #include "Globals.hpp"
 #include <PackedIntArray.hpp>
 
-namespace KeyCircularBuffer
+class CKeyCircularBuffer
 {
-	namespace Private
+	MouseKeyboard::SKeyHistorical _buf[ 256 ];
+	ui8 _bufPos;
+	ui8 _depth;
+
+public:
+	CKeyCircularBuffer()
 	{
-		MouseKeyboard::SKeyHistorical _buf[ 256 ];
-		ui8 _bufPos;
-		ui8 _depth;
+		Clear();
 	}
 
     void Clear()
@@ -45,12 +48,7 @@ namespace KeyCircularBuffer
 		using namespace Private;
 		return _depth;
 	}
-
-    AUTO_EXEC
-    (
-        Clear();
-    );
-};
+} KeyCircularBuffer;
 
 namespace
 {
@@ -141,27 +139,27 @@ void MouseKeyboard::ProcsGet( SMouseKeyboardProcs *po_procs )
 void MouseKeyboard::ResetKeyDowns()
 {
 	o_KeysStatus = decltype(o_KeysStatus)( 256, 0 );
-    KeyCircularBuffer::Clear();
+    KeyCircularBuffer.Clear();
 }
 
 void MouseKeyboard::ClearHistory()
 {
-    KeyCircularBuffer::Clear();
+    KeyCircularBuffer.Clear();
 }
 
 const MouseKeyboard::SKeyHistorical &MouseKeyboard::HistoryAcquire( ui8 offsetFromBegin )
 {
-    return KeyCircularBuffer::Acquire( offsetFromBegin );
+    return KeyCircularBuffer.Acquire( offsetFromBegin );
 }
 
 ui8 MouseKeyboard::HistoryDepth()
 {
-	return KeyCircularBuffer::Depth();
+	return KeyCircularBuffer.Depth();
 }
 
 bln MouseKeyboard::IsTopOfHistory( const ui8 *keys, uiw keysCount, bln is_newestToOldest )
 {
-	if( keysCount > KeyCircularBuffer::Depth() )
+	if( keysCount > KeyCircularBuffer.Depth() )
 	{
 		return false;
 	}
@@ -169,7 +167,7 @@ bln MouseKeyboard::IsTopOfHistory( const ui8 *keys, uiw keysCount, bln is_newest
 	{
 		for( uiw index = 0; index < keysCount; ++index )
 		{
-			if( KeyCircularBuffer::Acquire( index ).key != keys[ index ] )
+			if( KeyCircularBuffer.Acquire( index ).key != keys[ index ] )
 			{
 				return false;
 			}
@@ -179,7 +177,7 @@ bln MouseKeyboard::IsTopOfHistory( const ui8 *keys, uiw keysCount, bln is_newest
 	{
 		for( uiw keyIndex = keysCount - 1, historyIndex = 0; keyIndex != uiw_max; --keyIndex, ++historyIndex )
 		{
-			if( KeyCircularBuffer::Acquire( historyIndex ).key != keys[ keyIndex ] )
+			if( KeyCircularBuffer.Acquire( historyIndex ).key != keys[ keyIndex ] )
 			{
 				return false;
 			}
@@ -202,7 +200,7 @@ void MouseKeyboard::KeyDown( ui8 key )
 		o_KeysStatus.Set( key, 1 );
 		o_Procs.OnKeyDown( key );
         PressedTimes[ key ] = Globals::Time;
-        KeyCircularBuffer::Push( key, Globals::Time );
+        KeyCircularBuffer.Push( key, Globals::Time );
 	}
 	is_DisableEvents = false;
 }
