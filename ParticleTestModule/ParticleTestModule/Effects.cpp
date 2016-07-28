@@ -118,9 +118,10 @@ void FilloutEffects()
 		data.rotSpeeds.data = vec3( 0, 0.25, 0 );
 		data.rotSpeeds.offsetMin = vec3( 0, 0, 0 );
 		data.rotSpeeds.offsetMax = vec3( 0, 0, 0 );
+		data.rotSpeedMult = Funcs::RandomRangeF32( 0.5, 1.5 );
 		data.curRot.data = vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 );
 		data.curRot.offsetMin = vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 );
-		data.curRot.offsetMax = vec3( 0, Funcs::RandomRangeF32( f32_pi / 2, f32_pi ), 0 );
+		data.curRot.offsetMax = vec3( Funcs::RandomFluctuateF32( 0.05, 0.15 ), Funcs::RandomRangeF32( f32_pi, f32_pi ), 0 );
 		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMin, 0.25f );
 		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMax, 0.25f );
 		return data;
@@ -130,9 +131,9 @@ void FilloutEffects()
 	auto whirlLocal = []
 	{
 		WhirlEffect::WhirlData data;
-		data.rotVec.data = vec3( 0, 0.01, 0 );
-		data.rotVec.offsetMin = vec3( -0.005, -0.005, -0.005 );
-		data.rotVec.offsetMax = vec3( 0.005, 0.005, 0.005 );
+		data.rotVec.data = vec3( 0, 0.05, 0 );
+		data.rotVec.offsetMin = vec3( -0.05, -0.05, -0.05 );
+		data.rotVec.offsetMax = vec3( 0.05, 0.05, 0.05 );
 		data.rotVec.scale = 0.1f;
 		data.rotSpeeds.data = vec3( 0, 0, 1 );
 		data.rotSpeeds.offsetMin = vec3( -0.25, -0.25, -0.25 );

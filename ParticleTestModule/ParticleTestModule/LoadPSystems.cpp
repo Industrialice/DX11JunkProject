@@ -62,14 +62,16 @@ void ParticleTest::LoadPSystems()
 		f128color color;
 		if( index % 2 == 0 )
 		{
-			color = f128color( Funcs::RandomFluctuateF32( 0.25, 0.1 ), Funcs::RandomFluctuateF32( 0.4, 0.1 ), 1, 1 );
+			//color = f128color( Funcs::RandomFluctuateF32( 0.25, 0.1 ), Funcs::RandomFluctuateF32( 0.4, 0.1 ), 1, 1 );
+			color = f128color( Funcs::RandomFluctuateF32( 0.25, 0.1 ), 1, Funcs::RandomFluctuateF32( 0.4, 0.1 ), 1 );
 		}
 		else
 		{
-			color = f128color( Funcs::RandomFluctuateF32( 1.0f, 0.1f ), Funcs::RandomFluctuateF32( 0.1, 0.1 ), Funcs::RandomFluctuateF32( 0.1, 0.1 ), 1.0f );
+			//color = f128color( Funcs::RandomRangeF32( 0.0, 0.1f ), Funcs::RandomRangeF32( 0.0, 0.15 ), Funcs::RandomRangeF32( 0.5, 1 ), 1.0f );
+			color = f128color( Funcs::RandomRangeF32( 0.0, 0.1f ), Funcs::RandomRangeF32( 0.5, 1 ), Funcs::RandomRangeF32( 0.0, 0.15 ), 1.0f );
 		}
 
-		addPSystem( 256, addPos, 0.01, 0.005, color, { "whirl_global", /*"whirl_local", "wind_test", */"vector_field_test" } );
+		addPSystem( 256, addPos, 0.01, 0.005, color, { "whirl_global", "whirl_local", /*"wind_test", */"vector_field_test" } );
 
 		addition += 0.0025f;
 	}

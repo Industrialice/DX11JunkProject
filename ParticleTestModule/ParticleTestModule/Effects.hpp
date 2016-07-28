@@ -57,7 +57,7 @@ static f32 ExpRand( f32 from, f32 to )
 	f32 center = diff * 0.5f;
 	f32 r = Funcs::RandomRangeF32( from, to );
 	f32 dist = abs( r - center ) / center;
-	r = Funcs::RandomFluctuateF32( center, 1.f / exp( dist ) * center );
+	r = Funcs::RandomFluctuateF32( center, abs( 1.f / exp( dist ) * center ) );
 	return r;
 }
 
@@ -83,6 +83,7 @@ public:
 		Vec3WithRand rotVec = { vec3( 0, 0, 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // вектор закрутки, определяет радиус вращения
 		Vec3WithRand rotSpeeds = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // скорость вращения
 		Vec3WithRand curRot = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // текущее вращение
+		f32 rotSpeedMult = 1.0f;
 		CStr effectName;
 	};
 	
@@ -104,7 +105,7 @@ public:
 		{
 			pdata[ particle ].rotVec = GetDataWithExpRand( data.rotVec );
 			pdata[ particle ].curRot = GetDataWithExpRand( data.curRot );
-			pdata[ particle ].rotSpeeds = GetDataWithExpRand( data.rotSpeeds );
+			LiceMath::Vec3Scale( &pdata[ particle ].rotSpeeds, &GetDataWithExpRand( data.rotSpeeds ), data.rotSpeedMult );
 		}
 
 		CreateBuf( particlesCount, sizeof(SWhirlData), pdata, uav.AddrModifiable() );
