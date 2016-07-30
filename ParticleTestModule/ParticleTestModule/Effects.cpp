@@ -111,8 +111,8 @@ void FilloutEffects()
 	{
 		WhirlEffect::WhirlData data;
 		data.rotVec = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.25, 1 ), vec3( -0.02, -0.02, -0.15 ), vec3( 0.02, 0.02, 0.15 ), 1.f } );
-		data.rotSpeeds = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.25, 0 ), vec3( 0, 0, 0 ), vec3( 0, 0, 0 ), ExpRand( 0.25, 2.5 ) } );
-		data.curRot = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 ), vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 ), vec3( Funcs::RandomFluctuateF32( 0.05, 0.15 ), Funcs::RandomRangeF32( f32_pi, f32_pi ), 0 ), 0.1f } );
+		data.rotSpeeds = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.25, 0 ), vec3( 0, 0, 0 ), vec3( 0, 0, 0 ), Funcs::RandomRangeF32( 0.25, 1.5 ) } );
+		data.curRot = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 ), vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 ), vec3( Funcs::RandomFluctuateF32( 0.05, 0.15 ), Funcs::RandomRangeF32( f32_pi, f32_pi ), 0 ), 1.f } );
 		return data;
 	};
 	AddEffect < WhirlEffect, WhirlEffect::WhirlData >( "whirl_global", whirlGlobal, whirlCS );
@@ -165,7 +165,7 @@ void FilloutEffects()
 		data.scale = vec3( 4, 2, 4 );
 		data.rotation = vec3( Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ) );
 		data.rotationSpeed = vec3( 0.1, 0.25, 0.01 );
-		data.strength = vec3( 0.025 );
+		data.strength = [](){ return vec3( 0.025 ); };
 		data.strictness = 0;
 		data.srv = VectorFieldSRV;
 		data.sampler = VectorFieldSamplerState;

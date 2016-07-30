@@ -3837,4 +3837,4 @@ float4 PS( float4 posH : SV_Position, float2 i_tex : TEXCOORD0, float3 i_posW : 
 [imp] compiled wind cs
 [imp] compiled vector field cs
 [imp] compiled erase frame data cs
-[imp] loading complete for 3.14194, shader loading time 2.63515 texture loading time 0.189413
+[imp] loading complete for 6.04474, shader loading time 5.00435 texture loading time 0.437313

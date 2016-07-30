@@ -133,16 +133,6 @@ FORCEINLINE void __CRTDECL operator delete[]( void *mem, const std::nothrow_t &t
 typedef i16 sct;
 #define SCT_SIZE 16
 
-static f32 NSecTimeToF32( ui64 time )
-{
-    return time / (1000.0 * 1000.0 * 1000.0);
-}
-
-static ui64 F32TimeToNSec( f32 time )
-{
-    return time * (1000.0 * 1000.0 * 1000.0);
-}
-
 #ifdef DEBUG
     #define dnull = 0
 #else

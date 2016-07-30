@@ -35,14 +35,18 @@ void ParticleTest::LoadMeshes()
 		_meshVerticesCount += count;
 	};
 
-	#define basicVertexCount 256
+	#define basicVertexCount 192
 
-	for( ui32 meshIndex = 0; meshIndex < 50; ++meshIndex )
+	for( ui32 meshIndex = 0; meshIndex < 100; ++meshIndex )
 	{
-		f32 r = 1;
-		f32 g = 1;
-		f32 b = 1;
-		f32 intensity = Funcs::RandomRangeF32( 0.1, 0.45 );
+		//f32 r = 1;
+		//f32 g = 1;
+		//f32 b = 1;
+		f32 r = Funcs::RandomFluctuateF32( 0.25, 0.1 );
+		f32 g = Funcs::RandomFluctuateF32( 0.4, 0.1 );
+		f32 b = 1.0f;
+		//f32 intensity = Funcs::RandomRangeF32( 0.1, 0.5 );
+		f32 intensity = Funcs::RandomRangeF32( 0.25, 1 );
 		r *= intensity;
 		g *= intensity;
 		b *= intensity;
@@ -52,19 +56,19 @@ void ParticleTest::LoadMeshes()
 		auto vectorFieldTestData = EffectsMap[ "vector_field_test" ]->CreateData < VectorFieldEffect::VectorFieldData >();
 		auto windTestData = EffectsMap[ "wind_test" ]->CreateData < WindEffect::WindData >();
 
-		vec3 curRot = vec3( 0, Funcs::RandomRangeF32( -f32_pi, f32_pi ), Funcs::RandomRangeF32( -0.25, 0.25f ) );
+		vec3 curRot = vec3( 0, Funcs::RandomRangeF32( -f32_pi, f32_pi ), Funcs::RandomRangeF32( -0.05, 0.025f ) );
 
 		auto rotFunc = []( vec3 *curRot, ui32 index ) -> vec3
 		{		
 			//if( index % 2 == 0 )
 			{
-				LiceMath::Vec3AdditionInplace( curRot, &vec3( 0, f32_pi / basicVertexCount, 0 ) );
+				LiceMath::Vec3AdditionInplace( curRot, &vec3( 0, f32_pi / basicVertexCount / 1.5, 0 ) );
 			}
 			/*else
 			{
 				LiceMath::Vec3AdditionInplace( curRot, &vec3( 0, 0, f32_pi / 512 ) );
 			}*/
-
+			
 			return *curRot;
 		};
 
@@ -78,7 +82,25 @@ void ParticleTest::LoadMeshes()
 
 		whirlLocalData->curRot = std::bind( rotVecFunc );
 
-		vectorFieldTestData->strength = vec3( 0.01, 0.025, 0.01 );
+		auto strengthFunc = []() -> vec3
+		{
+			f32 time = NSecTimeToF32( Globals::Time );
+			f32 left = fmod( time, 20.f );
+			if( left > 12.f )
+			{
+				f32 val = Funcs::SaturateF32( (left - 12) / 4 );
+				f32 x = Funcs::LerpF32( 0.01, 0.005, val );
+				f32 y = Funcs::LerpF32( 0.05, 0.01, val );
+				f32 z = Funcs::LerpF32( 0.01, 0.005, val );
+				return vec3( x, y, z );
+			}
+			vec3 v = vec3( 0.01, 0.05, 0.01 );
+			LiceMath::Vec3ScaleInplace( &v, Funcs::SaturateF32( left / 4 ) );
+			return v;
+		};
+
+		vectorFieldTestData->strength = strengthFunc;
+		vectorFieldTestData->rotationSpeed = vec3( 0.05, 0.1, 0.05 );
 		vectorFieldTestData->rotationSpeed = vec3( 0 );
 
 		UniquePtr < SParticle > vertices = new SParticle[ basicVertexCount ];

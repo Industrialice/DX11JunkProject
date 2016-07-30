@@ -6,6 +6,16 @@
 	#define DX11_EXPORT __declspec(dllimport)
 #endif
 
+inline f32 NSecTimeToF32( ui64 time )
+{
+    return time / (1000.0 * 1000.0 * 1000.0);
+}
+
+inline ui64 F32TimeToNSec( f32 time )
+{
+    return time * (1000.0 * 1000.0 * 1000.0);
+}
+
 template < typename X > struct COMDeleter
 {
     COMDeleter( X *huh )

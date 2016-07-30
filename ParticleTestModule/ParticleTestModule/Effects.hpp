@@ -302,7 +302,7 @@ public:
 		vec3 scale; // размер вектор филда, для осей X Y Z независимо
 		vec3 rotation; // текущее вращение
 		vec3 rotationSpeed; // скорость вращения
-		vec3 strength; // множитель для сил вектор филда, чем больше, тем больше влияние сил на частицы, 0 - нет эффекта
+		std::function < vec3() > strength; // множитель для сил вектор филда, чем больше, тем больше влияние сил на частицы, 0 - нет эффекта
 		f32 strictness; // строгость следования частиц силам из вектор филда, 0 - нет влияния, 1 - частицы строго следуют в направлении сил
 		vec3 directionAddition; // дополнительный вектор для сил в вектор филде, прибавляется к векторам всех сил, может пригодиться для задания рандомности
 		f32 dragTarget, dragFluctuation; // сопротивление "воздуха", чем больше значение, тем быстрее торможение частиц
@@ -387,7 +387,7 @@ public:
 
 		view->start = start;
 		LiceMath::M4x4InverseTranspose4x3( &view->worldInverse, &world );
-		view->strength = vfd.strength;
+		view->strength = vfd.strength();
 		view->strictness = vfd.strictness;
 		view->world = (m4x4)world;
 		//view->directionAddition = vfd.directionAddition;
