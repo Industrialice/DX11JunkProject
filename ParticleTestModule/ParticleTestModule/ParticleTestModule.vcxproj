@@ -122,6 +122,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Effects.cpp" />
+    <ClCompile Include="LoadMeshes.cpp" />
     <ClCompile Include="LoadPSystems.cpp" />
     <ClCompile Include="PreHeader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

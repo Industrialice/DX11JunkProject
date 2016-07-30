@@ -79,6 +79,7 @@ public:
     void WideAmountSet( f32 amount );
     f32 WideAmountGet() const;
     void FlushGlowMap();
+	void FlushToRT( ID3D11RenderTargetView *rt );
 
     struct Private
     {
@@ -92,6 +93,7 @@ private:
     static ID3D11BlendState *_si_blend;
     static sdrhdl _s_flatterBloomFinalShader;
     static sdrhdl _s_flatterBloomDoNothingShader;
+	static sdrhdl _s_flatterOnlySampleShader;
 
     void CreateSources( SBloom *po_bloom );
     void CreateRT( SRT *rt, ui32 width, ui32 height );

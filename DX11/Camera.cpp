@@ -1,6 +1,7 @@
 #include "PreHeader.hpp"
 #include "Camera.hpp"
 #include "Globals.hpp"
+#include "RendererGlobals.hpp"
 #include <math.h>
 
 CCamera::CCamera( f32 nearPlane, f32 farPlane, f32 fov )
@@ -37,7 +38,7 @@ f32 CCamera::FOVGet() const
 
 void CCamera::FOVSet( f32 fov, bln is_remember )
 {
-    LiceMath::Projection( &_o_proj, fov, _nearPlane, _farPlane, (f32)Globals::Width / (f32)Globals::Height );
+    LiceMath::Projection( &_o_proj, fov, _nearPlane, _farPlane, (f32)RendererGlobals::RenderingWidth / (f32)RendererGlobals::RenderingHeight );
     if( is_remember )
     {
         _fov = fov;

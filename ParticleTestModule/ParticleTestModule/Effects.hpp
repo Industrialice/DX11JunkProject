@@ -80,9 +80,9 @@ class WhirlEffect final : public UniformInterface
 public:
 	struct WhirlData
 	{
-		Vec3WithRand rotVec = { vec3( 0, 0, 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // вектор закрутки, определяет радиус вращения
-		Vec3WithRand rotSpeeds = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // скорость вращения
-		Vec3WithRand curRot = { vec3( 0 ), vec3( 0 ), vec3( 0 ), 1.0f }; // текущее вращение
+		std::function < vec3( ui32 ) > rotVec;
+		std::function < vec3( ui32 ) > rotSpeeds;
+		std::function < vec3( ui32 ) > curRot;
 		f32 rotSpeedMult = 1.0f;
 		CStr effectName;
 	};
@@ -103,9 +103,9 @@ public:
 
 		for( ui32 particle = 0; particle < particlesCount; ++particle )
 		{
-			pdata[ particle ].rotVec = GetDataWithExpRand( data.rotVec );
-			pdata[ particle ].curRot = GetDataWithExpRand( data.curRot );
-			LiceMath::Vec3Scale( &pdata[ particle ].rotSpeeds, &GetDataWithExpRand( data.rotSpeeds ), data.rotSpeedMult );
+			pdata[ particle ].rotVec = data.rotVec( particle );
+			pdata[ particle ].curRot = data.curRot( particle );
+			LiceMath::Vec3Scale( &pdata[ particle ].rotSpeeds, &data.rotSpeeds( particle ), data.rotSpeedMult );
 		}
 
 		CreateBuf( particlesCount, sizeof(SWhirlData), pdata, uav.AddrModifiable() );
@@ -235,7 +235,7 @@ public:
 		{
 			pdata[ particle ].shiftedPosition = vec3( 0 );
 			//pdata[ particle ].weigthRev = rand() % 2 ? 0.25f : 1.f;
-			pdata[ particle ].weigthRev = weightRev + Funcs::RandomRangeF32( 0, 0.1f );
+			pdata[ particle ].weigthRev = weightRev;
 		}
 
 		CreateBuf( particlesCount, sizeof(SWindPerParticleData), pdata, uav.AddrModifiable() );
@@ -288,7 +288,7 @@ public:
 
 class VectorFieldEffect final : public UniformInterface
 {
-	COMUniquePtr < ID3D11UnorderedAccessView > _uav;
+	COMUniquePtr < ID3D11UnorderedAccessView > _particlesVBUAV;
 	UniquePtr < CObject > _boxVisualisation;
 	TimeMoment _directionAdditionNextChange = TimeMoment::CreateCurrent();
 	TimeMoment _directionAdditionLastChange = TimeMoment::CreateCurrent();
@@ -302,7 +302,7 @@ public:
 		vec3 scale; // размер вектор филда, для осей X Y Z независимо
 		vec3 rotation; // текущее вращение
 		vec3 rotationSpeed; // скорость вращения
-		f32 strength; // множитель для сил вектор филда, чем больше, тем больше влияние сил на частицы, 0 - нет эффекта
+		vec3 strength; // множитель для сил вектор филда, чем больше, тем больше влияние сил на частицы, 0 - нет эффекта
 		f32 strictness; // строгость следования частиц силам из вектор филда, 0 - нет влияния, 1 - частицы строго следуют в направлении сил
 		vec3 directionAddition; // дополнительный вектор для сил в вектор филде, прибавляется к векторам всех сил, может пригодиться для задания рандомности
 		f32 dragTarget, dragFluctuation; // сопротивление "воздуха", чем больше значение, тем быстрее торможение частиц
@@ -333,7 +333,7 @@ public:
 			pdata[ particle ].velocityMults = GetDataWithExpRand( data.velocityMults );
 		}
 
-		CreateBuf( particlesCount, sizeof(SVectorFieldParticleData), pdata, _uav.AddrModifiable() );
+		CreateBuf( particlesCount, sizeof(SVectorFieldParticleData), pdata, _particlesVBUAV.AddrModifiable() );
 
 		_boxVisualisation = CreateBox();
 	}
@@ -343,13 +343,11 @@ public:
 		struct UniView
 		{
 			ui32 start;
-			f32 strength;
-			f32 strictness;
-			f32 _padding0;
+			vec3 strength;
 			m4x4 worldInverse;
 			m4x4 world;
 			vec3 directionAddition;
-			f32 _padding1;
+			f32 strictness;
 		};
 
 		vec3 rotScaled;
@@ -397,7 +395,7 @@ public:
 
 		RendererGlobals::i_ImContext->Unmap( uniBuffer, 0 );
 
-		RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 2, 1, _uav.Addr(), 0 );
+		RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 2, 1, _particlesVBUAV.Addr(), 0 );
 
 		RendererGlobals::i_ImContext->CSSetShaderResources( 0, 1, &vfd.srv );
 

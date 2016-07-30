@@ -233,14 +233,7 @@ void PostProcess::Private::Initialize()
 
     ID3D11Texture2D *i_randomTex;
     DXHRCHECK( RendererGlobals::i_Device->CreateTexture2D( &o_td, &o_init, &i_randomTex ) );
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC o_rvd;
-    o_rvd.Format = o_td.Format;
-    o_rvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    o_rvd.Texture1D.MipLevels = o_td.MipLevels;
-    o_rvd.Texture1D.MostDetailedMip = 0;
-
-    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_randomTex, &o_rvd, &i_RandTex ) );
+    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_randomTex, 0, &i_RandTex ) );
 
     i_randomTex->Release();
 
@@ -291,14 +284,7 @@ void PostProcess::Private::Initialize()
 
 		ID3D11Texture2D *i_randomTex;
 		DXHRCHECK( RendererGlobals::i_Device->CreateTexture2D( &o_td, &o_init, &i_randomTex ) );
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC o_rvd;
-		o_rvd.Format = o_td.Format;
-		o_rvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		o_rvd.Texture1D.MipLevels = o_td.MipLevels;
-		o_rvd.Texture1D.MostDetailedMip = 0;
-
-		DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_randomTex, &o_rvd, &i_RandColoredTex ) );
+		DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_randomTex, 0, &i_RandColoredTex ) );
 
 		i_randomTex->Release();
 
@@ -347,25 +333,18 @@ void PostProcess::Private::Initialize()
     o_td.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
     o_td.CPUAccessFlags = 0;
     o_td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    o_td.Height = Globals::Height;
+    o_td.Height = RendererGlobals::RenderingHeight;
     o_td.MipLevels = 1;
     o_td.MiscFlags = 0;
     o_td.Usage = D3D11_USAGE_DEFAULT;
-    o_td.Width = Globals::Width;
+    o_td.Width = RendererGlobals::RenderingWidth;
     o_td.SampleDesc.Count = 1;
     o_td.SampleDesc.Quality = 0;
 
     ID3D11Texture2D *i_bwTex;
     DXHRCHECK( RendererGlobals::i_Device->CreateTexture2D( &o_td, 0, &i_bwTex ) );
     DXHRCHECK( RendererGlobals::i_Device->CreateRenderTargetView( i_bwTex, 0, &i_BlackWhiteRTV ) );
-
-    //D3D11_SHADER_RESOURCE_VIEW_DESC o_rvd;
-    o_rvd.Format = o_td.Format;
-    o_rvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    o_rvd.Texture1D.MipLevels = o_td.MipLevels;
-    o_rvd.Texture1D.MostDetailedMip = 0;
-
-    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_bwTex, &o_rvd, &i_BlackWhiteSRV ) );
+    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( i_bwTex, 0, &i_BlackWhiteSRV ) );
 
     D3D11_SAMPLER_DESC o_samp;
     o_samp.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
@@ -414,7 +393,7 @@ uiw PostProcess::Effects::FilmGrain::Process( void *mem, Private::ProcessActions
         D3D11_MAPPED_SUBRESOURCE o_sr;
         DXHRCHECK( RendererGlobals::i_ImContext->Map( RendererGlobals::ai_VSShaderRegisters[ 0 ], 0, D3D11_MAP_WRITE_DISCARD, 0, &o_sr ) );
 		CVecArr < byte > vsTarget( (byte *)o_sr.pData, 0, sizeof(vec4) * 4096 );
-        vec2 wh = vec2( (f32)Globals::Width / RandTexWidth, (f32)Globals::Height / RandTexHeight );
+        vec2 wh = vec2( (f32)RendererGlobals::RenderingWidth / RandTexWidth, (f32)RendererGlobals::RenderingHeight / RandTexHeight );
         m2x2 o_texTransform;
         LiceMath::M2x2ScaleRotate( &o_texTransform, wh.x, wh.y, Funcs::RandomRangeF32( 0, f32_pi * 2 ) );
 		vsTarget.Append( (byte *)&vec4( o_texTransform.e00, o_texTransform.e10, Funcs::RandomF32(), Funcs::RandomF32() ), sizeof(vec4) );
@@ -450,7 +429,7 @@ uiw PostProcess::Effects::FilmGrainColored::Process( void *mem, Private::Process
         D3D11_MAPPED_SUBRESOURCE o_sr;
         DXHRCHECK( RendererGlobals::i_ImContext->Map( RendererGlobals::ai_VSShaderRegisters[ 0 ], 0, D3D11_MAP_WRITE_DISCARD, 0, &o_sr ) );
 		CVecArr < byte > vsTarget( (byte *)o_sr.pData, 0, sizeof( vec4 ) * 4096 );
-        vec2 wh = vec2( (f32)Globals::Width / RandColoredTexWidth, (f32)Globals::Height / RandColoredTexHeight );
+        vec2 wh = vec2( (f32)RendererGlobals::RenderingWidth / RandColoredTexWidth, (f32)RendererGlobals::RenderingHeight / RandColoredTexHeight );
         m2x2 o_texTransform;
         LiceMath::M2x2ScaleRotate( &o_texTransform, wh.x, wh.y, Funcs::RandomRangeF32( 0, f32_pi * 2 ) );
 		vsTarget.Append( (byte *)&vec4( o_texTransform.e00, o_texTransform.e10, Funcs::RandomF32(), Funcs::RandomF32() ), sizeof(vec4) );

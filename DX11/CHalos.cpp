@@ -127,8 +127,8 @@ void CHalos::NonOccludeUpdate()
         //    continue;
         //}
 
-        f32 widthExpected = Globals::Width / 2 * _o_halos[ index ].intensity;
-        f32 heightExpected = Globals::Height / 2 * _o_halos[ index ].intensity;
+        f32 widthExpected = RendererGlobals::RenderingWidth / 2 * _o_halos[ index ].intensity;
+        f32 heightExpected = RendererGlobals::RenderingHeight / 2 * _o_halos[ index ].intensity;
 
         f32 pixelsExpected = (widthExpected * heightExpected) / w / 3;
 
@@ -231,7 +231,7 @@ void CHalos::Draw( bln is_stepTwo )
             return;
         }
 
-        f32 screenSizePixels = Globals::Width * Globals::Height;
+        f32 screenSizePixels = RendererGlobals::RenderingWidth * RendererGlobals::RenderingHeight;
 
         D3D11_MAPPED_SUBRESOURCE o_sr;
         DXHRCHECK( RendererGlobals::i_ImContext->Map( _i_vbDraw, 0, D3D11_MAP_WRITE_DISCARD, 0, &o_sr ) );

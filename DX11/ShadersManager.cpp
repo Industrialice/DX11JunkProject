@@ -150,22 +150,22 @@ bln ShadersManager::Create( const char *cp_name, const byte *cp_vsCode, uiw vsCo
     if( is_screenConsts )
     {
         ao_macros[ macroIndex ].Name = "SCREEN_WIDTH";
-        Funcs::F32ToStr( Globals::Width, a_screenMacroBufs[ 0 ] );
+        Funcs::F32ToStr( RendererGlobals::RenderingWidth, a_screenMacroBufs[ 0 ] );
         ao_macros[ macroIndex ].Definition = a_screenMacroBufs[ 0 ];
         ++macroIndex;
 
         ao_macros[ macroIndex ].Name = "SCREEN_HEIGHT";
-        Funcs::F32ToStr( Globals::Height, a_screenMacroBufs[ 1 ] );
+        Funcs::F32ToStr( RendererGlobals::RenderingHeight, a_screenMacroBufs[ 1 ] );
         ao_macros[ macroIndex ].Definition = a_screenMacroBufs[ 1 ];
         ++macroIndex;
 
         ao_macros[ macroIndex ].Name = "PIXEL_SIZE_X";
-        Funcs::F32ToStr( 1.f / Globals::Width, a_screenMacroBufs[ 2 ] );
+        Funcs::F32ToStr( 1.f / RendererGlobals::RenderingWidth, a_screenMacroBufs[ 2 ] );
         ao_macros[ macroIndex ].Definition = a_screenMacroBufs[ 2 ];
         ++macroIndex;
 
         ao_macros[ macroIndex ].Name = "PIXEL_SIZE_Y";
-        Funcs::F32ToStr( 1.f / Globals::Height, a_screenMacroBufs[ 3 ] );
+        Funcs::F32ToStr( 1.f / RendererGlobals::RenderingHeight, a_screenMacroBufs[ 3 ] );
         ao_macros[ macroIndex ].Definition = a_screenMacroBufs[ 3 ];
         ++macroIndex;
     }

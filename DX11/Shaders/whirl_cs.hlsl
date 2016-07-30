@@ -17,8 +17,10 @@ cbuffer ConstBuffer : register(b0)
 struct Particle
 {
 	float3 position;
-	float currentSize;
+	float _padding0;
 	float4 color;
+	float2 size_or_texcoord;
+	float2 _padding1;
 };
 
 RWStructuredBuffer < Particle > DataToProc : register(u0);
@@ -26,6 +28,9 @@ RWStructuredBuffer < Particle > DataToProc : register(u0);
 struct ParticleFrame
 {
 	float4x4 trans;
+	float2 particleScale;
+	float _padding0;
+	float _padding1;
 };
 
 RWStructuredBuffer < ParticleFrame > DataToProcFrame : register(u1);

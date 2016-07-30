@@ -13,14 +13,15 @@ struct SVsOut
 {
 	float4 position : SV_Position;
 	float2 texCoord : TEXCOORD;
-    float4 color : COLOR;
+    float3 color : COLOR;
 };
 
 SOutput PS( SVsOut vertex ) : SV_Target
 {
 	float4 dif = CMap.Sample( CMapSampler, vertex.texCoord );
+	float3 color = (vertex.color * dif.rgb) * dif.a;
 	
 	SOutput op;
-	op.color1 = op.color0 = dif * vertex.color;
+	op.color1 = op.color0 = float4( color, 1 );
 	return op;
 }

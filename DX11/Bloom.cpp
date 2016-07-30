@@ -11,6 +11,7 @@ ID3D11DepthStencilState *CBloom::_si_depthWriteOnly;
 ID3D11BlendState *CBloom::_si_blend;
 sdrhdl CBloom::_s_flatterBloomFinalShader;
 sdrhdl CBloom::_s_flatterBloomDoNothingShader;
+sdrhdl CBloom::_s_flatterOnlySampleShader;
 
 CBloom::~CBloom()
 {
@@ -270,6 +271,28 @@ f32 CBloom::WideAmountGet() const
     return _o_wideBloom.amount;
 }
 
+void CBloom::FlushToRT( ID3D11RenderTargetView *rt )
+{
+	if( rt == nullptr || rt == _i_rtv )
+	{
+		return;
+	}
+
+    static ID3D11ShaderResourceView *const ai_nullviews[ 3 ];
+    RendererGlobals::i_ImContext->PSSetShaderResources( 0, 3, ai_nullviews );
+	ShadersManager::ApplyShader( _s_flatterBloomDoNothingShader, false );
+	RendererGlobals::i_ImContext->OMSetBlendState( RendererGlobals::i_NoBlend, 0, 0xFFFFFFFF );
+	RendererGlobals::SetViewports( 1, &RendererGlobals::o_ScreenViewport );
+	RendererGlobals::i_ImContext->OMSetRenderTargets( 1, &rt, 0 );
+	RendererGlobals::i_ImContext->PSSetShaderResources( 0, 1, _i_srv.Addr() );
+	RendererGlobals::i_ImContext->Draw( 3, 0 );
+	RendererGlobals::i_ImContext->PSSetShaderResources( 0, 1, ai_nullviews );
+	RendererGlobals::i_ImContext->ClearRenderTargetView( _i_rtv, Colora::Black.arr );
+	RendererGlobals::SetViewports( 1, &_vps[ 0 ] );
+
+    RenderingStatesSet( _rstatesCur, false, false );
+}
+
 void CBloom::FlushGlowMap()
 {
     if( !_is_bloomActive )
@@ -347,7 +370,7 @@ void CBloom::Private::Initialize()  //  static
     o_samp.BorderColor[ 3 ] = 0.f;
     o_samp.ComparisonFunc = D3D11_COMPARISON_NEVER;
     o_samp.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-    o_samp.MaxAnisotropy = 16;
+    o_samp.MaxAnisotropy = 1;
     o_samp.MaxLOD = FLT_MAX;
     o_samp.MinLOD = -FLT_MAX;
     o_samp.MipLODBias = 0.f;
@@ -384,6 +407,7 @@ void CBloom::Private::Initialize()  //  static
 
     _s_flatterBloomFinalShader = ShadersManager::AcquireByName( "flatter_bloom_final" );
     _s_flatterBloomDoNothingShader = ShadersManager::AcquireByName( "flatter_bloom_nothing" );
+	_s_flatterOnlySampleShader = ShadersManager::AcquireByName( "flatter_onlySample" );
 }
 
 NOINLINE void CBloom::CreateSources( SBloom *po_bloom )

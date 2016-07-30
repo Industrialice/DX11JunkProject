@@ -17,10 +17,10 @@ namespace RendererGlobals
     ScreenRect PixelsRectToScreenRect( const PixelsRect &rect )
     {
         ScreenRect sr;
-        sr.x0 = (rect.x0 * 2) / (f32)Globals::Width - 1.f;
-        sr.x1 = (rect.x1 * 2) / (f32)Globals::Width - 1.f;
-        sr.y0 = (rect.y0 * -2) / (f32)Globals::Height + 1.f;
-        sr.y1 = (rect.y1 * -2) / (f32)Globals::Height + 1.f;
+        sr.x0 = (rect.x0 * 2) / (f32)RendererGlobals::RenderingWidth - 1.f;
+        sr.x1 = (rect.x1 * 2) / (f32)RendererGlobals::RenderingWidth - 1.f;
+        sr.y0 = (rect.y0 * -2) / (f32)RendererGlobals::RenderingHeight + 1.f;
+        sr.y1 = (rect.y1 * -2) / (f32)RendererGlobals::RenderingHeight + 1.f;
         return sr;
     }
 
@@ -28,6 +28,8 @@ namespace RendererGlobals
 	ID3D11DeviceContext *i_ImContext;
 	IDXGISwapChain *i_SwapChain;
 	ID3D11Texture2D *i_DepthStencilBuffer;
+	ID3D11RenderTargetView *i_SuperSampleRTV;
+	ID3D11ShaderResourceView *i_SuperSampleSRV;
 	ID3D11RenderTargetView *i_MainRenderTargetView;
     ID3D11ShaderResourceView *i_MainSRV;
 	ID3D11DepthStencilView *i_DepthStencilView;
@@ -35,6 +37,8 @@ namespace RendererGlobals
     ID3D11RasterizerState *i_RS;
     ID3D11BlendState *i_NoBlend;
     ID3D11DepthStencilState *i_DepthStencilDefault;
+	bln is_UseSuperSampling = false;
+	ui32 RenderingWidth, RenderingHeight;
 
     LayoutsManager DefLayoutsManager;
 

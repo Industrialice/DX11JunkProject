@@ -11,19 +11,21 @@ cbuffer FrameData : register(b13)
 cbuffer ConstBuffer : register(b0)
 {
 	uint StartParticle : packoffset(c0);
-	float VectorFieldStrength : packoffset(c0.y);
-	float VectorFieldStrictness : packoffset(c0.z);
+	float3 VectorFieldStrength : packoffset(c0.y);
 	float4x4 VectorFieldWorldInverse : packoffset(c1);
 	float4x4 VectorFieldWorld : packoffset(c5);
 	float3 VectorFieldDirectionAddition : packoffset(c9);
+	float VectorFieldStrictness : packoffset(c9.w);
 }
 
 /*  don't forget to change the same struct in vs.hlsl  */
 struct Particle
 {
 	float3 position;
-	float currentSize;
+	float _padding0;
 	float4 color;
+	float2 size_or_texcoord;
+	float2 _padding1;
 };
 
 RWStructuredBuffer < Particle > DataToProc : register(u0);
@@ -31,6 +33,9 @@ RWStructuredBuffer < Particle > DataToProc : register(u0);
 struct ParticleFrame
 {
 	float4x4 trans;
+	float2 particleScale;
+	float _padding0;
+	float _padding1;
 };
 
 RWStructuredBuffer < ParticleFrame > DataToProcFrame : register(u1);
@@ -66,7 +71,7 @@ inline void ProcessParticle( uint index, uint localIndex )
 
 				float force = sampled.a;
 
-				VectorFieldData[ localIndex ].velocity += vec * (force * VectorFieldStrength * DT);
+				VectorFieldData[ localIndex ].velocity += vec * (DT * force * VectorFieldStrength);
 
 				DataToProcFrame[ index ].trans[3].xyz += vec * (VectorFieldStrictness * DT);
 			}

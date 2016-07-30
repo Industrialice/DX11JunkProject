@@ -1,9 +1,12 @@
 ﻿#include "PreHeader.hpp"
 #include "Header.hpp"
 
-struct alignas(64) ParticleFrame
+struct ParticleFrame
 {
 	m4x4 mat;
+	vec2 particleScale;
+	f32 _padding0;
+	f32 _padding1;
 };
 
 enum { ParticlesReserveSize = 1000000 };
@@ -62,9 +65,11 @@ ParticleTest::ParticleTest( const vec3 &o_pos ) : CObject( o_pos, vec3(), vec3()
 
 	_ss = SamplersManager::GetState( &sampDesc );
 
-	_drawShader = ShadersManager::AcquireByName( "particleTest" );
+	_particlesDrawShader = ShadersManager::AcquireByName( "particleTest" );
 
-	ASSUME( sizeof(SParticle) == 32 );
+	_meshesDrawShader = ShadersManager::AcquireByName( "meshesTest" );
+
+	ASSUME( sizeof(SParticle) == 48 );
 
 	static const D3D11_BUFFER_DESC vbufDesc =
 	{
@@ -77,8 +82,22 @@ ParticleTest::ParticleTest( const vec3 &o_pos ) : CObject( o_pos, vec3(), vec3()
 	};
 
 	DXHRCHECK( RendererGlobals::i_Device->CreateBuffer( &vbufDesc, 0, _particlesVB.AddrModifiable() ) );
-    DXHRCHECK( RendererGlobals::i_Device->CreateUnorderedAccessView( _particlesVB, 0, _uav.AddrModifiableRelease() ) );
-    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( _particlesVB, 0, _srv.AddrModifiableRelease() ) );
+    DXHRCHECK( RendererGlobals::i_Device->CreateUnorderedAccessView( _particlesVB, 0, _particlesVBUAV.AddrModifiableRelease() ) );
+    DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( _particlesVB, 0, _particlesVBSRV.AddrModifiableRelease() ) );
+
+	static const D3D11_BUFFER_DESC vbufMeshDesc =
+	{
+		ParticlesReserveSize * sizeof(SParticle),
+		D3D11_USAGE_DEFAULT,
+		D3D11_BIND_VERTEX_BUFFER,
+		0,
+		0,
+		sizeof(SParticle)
+	};
+
+	DXHRCHECK( RendererGlobals::i_Device->CreateBuffer( &vbufMeshDesc, 0, _meshesVB.AddrModifiable() ) );
+
+	ASSUME( sizeof(ParticleFrame) == 80 );
 
 	static const D3D11_BUFFER_DESC vbufFrameDataDesc =
 	{
@@ -95,6 +114,8 @@ ParticleTest::ParticleTest( const vec3 &o_pos ) : CObject( o_pos, vec3(), vec3()
     DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( _particlesFrameDataVB, 0, _frameDataSRV.AddrModifiableRelease() ) );
 
 	_textureView = TextureLoader::Load( "Textures/ball.dds" );
+
+	_circleTextureView = TextureLoader::Load( "Textures/circle.dds" );
 	
 	if( CompileShader( L"Shaders/eraseFrameData_cs.hlsl", &_eraseFrameDataCS ) )
 	{
@@ -110,7 +131,20 @@ ParticleTest::ParticleTest( const vec3 &o_pos ) : CObject( o_pos, vec3(), vec3()
     uniBufDesc.Usage = D3D11_USAGE_DYNAMIC;
     DXHRCHECK( RendererGlobals::i_Device->CreateBuffer( &uniBufDesc, 0, _uniBuffer.AddrModifiable() ) );
 
-	LoadPSystems();
+	static const VertexBufferFieldDesc MeshBufferDesc[] =
+	{
+		{ "POSITION", DXGI_FORMAT_R32G32B32_FLOAT, 0, 0 },
+		{ "COLOR", DXGI_FORMAT_R32G32B32A32_FLOAT, 16, 0 },
+		{ "TEXCOORD", DXGI_FORMAT_R32G32_FLOAT, 32, 0 }
+	};
+
+	LayoutsManager::BufferDesc_t compiledMeshBufferDesc = RendererGlobals::DefLayoutsManager.CompileBufferDesc( MakeRefVec( MeshBufferDesc ) );
+	bln meshBlendResult = ShadersManager::TryToBlend( compiledMeshBufferDesc, _meshesDrawShader, &_meshInputLayout );
+	ASSUME( meshBlendResult );
+
+	//LoadPSystems();
+
+	LoadMeshes();
 }
 
 void ParticleTest::Update()
@@ -141,7 +175,7 @@ void ParticleTest::Draw( bln is_stepTwo )
 
 	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 0, 1, _frameDataUAV.Addr(), 0 );
 	RendererGlobals::i_ImContext->CSSetShader( _eraseFrameDataCS.get(), 0, 0 );
-	RendererGlobals::i_ImContext->Dispatch( (UINT)MEMALIGN( _particlesCount, 64 ) / 64, 1, 1 );
+	RendererGlobals::i_ImContext->Dispatch( (UINT)MEMALIGN( (_particlesCount + _meshVerticesCount), 64 ) / 64, 1, 1 );
 
 	ID3D11UnorderedAccessView *resetUAVs[ 3 ] = {};
 	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 0, 3, resetUAVs, 0 );
@@ -149,7 +183,7 @@ void ParticleTest::Draw( bln is_stepTwo )
 	RendererGlobals::i_ImContext->CSSetConstantBuffers( 0, 1, _uniBuffer.Addr() );
 	RendererGlobals::i_ImContext->CSSetConstantBuffers( 13, 1, &RendererGlobals::ai_VSShaderRegisters[ 13 ] );
 			
-	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 0, 1, _uav.Addr(), 0 );
+	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 0, 1, _particlesVBUAV.Addr(), 0 );
 	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 1, 1, _frameDataUAV.Addr(), 0 );
 
 	for( PSystem &ps : _psystems )
@@ -157,16 +191,30 @@ void ParticleTest::Draw( bln is_stepTwo )
 		for( PSystem::CS &cs : ps.csStack )
 		{
 			RendererGlobals::i_ImContext->CSSetShader( cs.uniforms->GetComputeShader(), 0, 0 );
-			cs.uniforms->SetUniformsAndUAVs( _uniBuffer, ps.start );
+			ui32 start = ps.start;
+			if( ps.type == PSystemType::Mesh )
+			{
+				start += _particlesCount;
+			}
+			cs.uniforms->SetUniformsAndUAVs( _uniBuffer, start );
 			RendererGlobals::i_ImContext->Dispatch( ps.count / 64, 1, 1 );
 		}
 	}
 
 	RendererGlobals::i_ImContext->CSSetUnorderedAccessViews( 0, 3, resetUAVs, 0 );
 
+	DrawAllParticles();
+
+	DrawAllMeshes();
+}
+
+void ParticleTest::DrawAllParticles()
+{
 	if( _particlesCount )
 	{
 		RendererGlobals::SetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+
+		ShadersManager::ApplyShader( _particlesDrawShader, false );
 	
 		RendererGlobals::i_ImContext->OMSetBlendState( _bs, 0, 0xFFffFFff );
     
@@ -182,18 +230,112 @@ void ParticleTest::Draw( bln is_stepTwo )
 		UINT resetValues = 0;
 		RendererGlobals::i_ImContext->IASetVertexBuffers( 0, 1, &resetVB, &resetValues, &resetValues );
 
-		ShadersManager::ApplyShader( _drawShader, false );
-
-		RendererGlobals::i_ImContext->VSSetShaderResources( 0, 1, _srv.Addr() );
+		RendererGlobals::i_ImContext->VSSetShaderResources( 0, 1, _particlesVBSRV.Addr() );
 		RendererGlobals::i_ImContext->VSSetShaderResources( 1, 1, _frameDataSRV.Addr() );
 
-		RendererGlobals::CurrentBloom->RenderingStatesSet( RStates::depthTest | RStates::glowmap | RStates::target, false );
+		RendererGlobals::CurrentBloom->RenderingStatesSet( RStates::depthTest | RStates::glowmap | RStates::target );
 
 		RendererGlobals::i_ImContext->Draw( 3 * _particlesCount, 0 );
 
 		ID3D11ShaderResourceView *resetSRVs[ 2 ] = {};
 		RendererGlobals::i_ImContext->VSSetShaderResources( 0, 2, resetSRVs );
 	}
+}
+
+void ParticleTest::DrawAllMeshes()
+{
+	if( _meshVerticesCount )
+	{
+		RendererGlobals::SetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+
+		ShadersManager::ApplyShader( _meshesDrawShader, false );
+	
+		RendererGlobals::i_ImContext->OMSetBlendState( _bs, 0, 0xFFffFFff );
+    
+		RendererGlobals::i_ImContext->RSSetState( _rs );
+
+		RendererGlobals::i_ImContext->PSSetSamplers( 0, 1, &_ss );
+
+		RendererGlobals::i_ImContext->PSSetShaderResources( 0, 1, &_circleTextureView );
+
+		RendererGlobals::i_ImContext->IASetInputLayout( _meshInputLayout );
+
+		UINT strites = sizeof(SParticle);
+		UINT offsets = 0;
+		RendererGlobals::i_ImContext->IASetVertexBuffers( 0, 1, _meshesVB.Addr(), &strites, &offsets );
+
+		RendererGlobals::i_ImContext->VSSetShaderResources( 1, 1, _frameDataSRV.Addr() );
+
+		RendererGlobals::CurrentBloom->RenderingStatesSet( RStates::depthTest | RStates::glowmap | RStates::target );
+			
+		for( PSystem &ps : _psystems )
+		{
+			if( ps.type == PSystemType::Mesh )
+			{
+				struct UniView
+				{
+					ui32 start;
+					f32 thickness;
+				};
+
+				D3D11_MAPPED_SUBRESOURCE sr;
+				DXHRCHECK( RendererGlobals::i_ImContext->Map( RendererGlobals::ai_VSShaderRegisters[ OBJECT_DATA_BUF ], 0, D3D11_MAP_WRITE_DISCARD, 0, &sr ) );
+
+				UniView *view = (UniView *)sr.pData;
+
+				view->start = _particlesCount + ps.start;
+				view->thickness = ps.thickness;
+
+				RendererGlobals::i_ImContext->Unmap( RendererGlobals::ai_VSShaderRegisters[ OBJECT_DATA_BUF ], 0 );
+
+				RendererGlobals::i_ImContext->Draw( ps.count, ps.start );
+			}
+		}
+
+		ID3D11ShaderResourceView *resetSRVs[ 2 ] = {};
+		RendererGlobals::i_ImContext->VSSetShaderResources( 0, 2, resetSRVs );
+	}
+}
+
+void ParticleTest::AddPSystem( ui32 count, const vec3 basicPosition, f32 targetSize, f32 sizeFluctuation, const f128color &color, std::initializer_list < const char * > effects )
+{
+	ASSUME( count % 64 == 0 );
+
+	UniquePtr < SParticle > p0 = new SParticle[ count ];
+	for( ui32 index = 0; index < count; ++index )
+	{
+		p0[ index ].position = basicPosition;
+		p0[ index ].color = color;
+		f32 size = Funcs::RandomFluctuateF32( targetSize, sizeFluctuation );
+		//p0[ index ].size_or_texcoord = { size, size };
+		p0[ index ].size_or_texcoord = { size, size };
+	}
+
+	D3D11_BOX box = { _particlesCount * sizeof(SParticle), 0, 0, (_particlesCount + count) * sizeof(SParticle), 1, 1 };
+	RendererGlobals::i_ImContext->UpdateSubresource( _particlesVB, 0, &box, p0.Get(), 0, 0 );
+
+	_psystems.EmplaceBack();
+	_psystems.Back().type = PSystemType::RawParticles;
+	_psystems.Back().count = count;
+	_psystems.Back().start = _particlesCount;
+
+	for( uiw index = 0; index < effects.size(); ++index )
+	{
+		auto creator = EffectsMap.find( CStr( effects.begin()[ index ] ) );
+		if( creator == EffectsMap.end() )
+		{
+			wchar_t str[ 256 ];
+			wchar_t convertedName[ 256 ];
+			mbstowcs( convertedName, effects.begin()[ index ], 256 );
+			swprintf( str, 256, L"эффект с именем %s не найден", convertedName );
+			MessageBoxW( 0, str, 0, 0 );
+			continue;
+		}
+		UniformInterface *effect = creator->second->Create( count );
+		_psystems.Back().csStack.EmplaceBack( effect, CStr( effects.begin()[ index ] ) );
+	}
+
+	_particlesCount += count;
 }
 
 CObject *CreateBox()

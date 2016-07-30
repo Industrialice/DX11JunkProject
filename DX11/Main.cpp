@@ -100,6 +100,10 @@ static int MainFunc()
     Globals::Height = ::GetSystemMetrics( SM_CYSCREEN );
     Globals::is_Windowed = true;
     Globals::is_UseWARP = false;
+	RendererGlobals::is_UseSuperSampling = true;
+
+	RendererGlobals::RenderingWidth = RendererGlobals::is_UseSuperSampling ? Globals::Width * 2 : Globals::Width;
+	RendererGlobals::RenderingHeight = RendererGlobals::is_UseSuperSampling ? Globals::Height * 2 : Globals::Height;
 
     ::srand( ::GetTickCount() );
 
@@ -234,7 +238,13 @@ static int MainFunc()
 
     RendererGlobals::CurrentBloom = &RendererGlobals::MainBloom;
     //  TODO: da fuck
-    RendererGlobals::MainBloom = std::move( CBloom( CBloom::BloomQuality::low, CBloom::BloomQuality::low, CBloom::BloomQuality::low, Globals::Width, Globals::Height, RendererGlobals::i_MainRenderTargetView, RendererGlobals::i_MainSRV, RendererGlobals::i_DepthStencilView ) );
+    RendererGlobals::MainBloom = std::move( 
+		CBloom( CBloom::BloomQuality::low, CBloom::BloomQuality::low, CBloom::BloomQuality::low, 
+			RendererGlobals::RenderingWidth, 
+			RendererGlobals::RenderingHeight, 
+			RendererGlobals::is_UseSuperSampling ? RendererGlobals::i_SuperSampleRTV : RendererGlobals::i_MainRenderTargetView, 
+			RendererGlobals::is_UseSuperSampling ? RendererGlobals::i_SuperSampleSRV : RendererGlobals::i_MainSRV, 
+			RendererGlobals::i_DepthStencilView ) );
     /*RendererGlobals::MainBloom.NearAmountSet( 0.5f );
     RendererGlobals::MainBloom.MediumAmountSet( 0.5f );
     RendererGlobals::MainBloom.WideAmountSet( 0.5f );*/
@@ -376,6 +386,9 @@ void LoadShaders()
       
     ShadersManager::CreateFromFiles( "particleTest", "Shaders/particleTest_vs.hlsl", 0, "Shaders/particleTest_ps.hlsl", false, 
         CVec < CStr >( { } ), 0, 0, 0, 0, 0 );
+      
+    ShadersManager::CreateFromFiles( "meshesTest", "Shaders/meshesTest_vs.hlsl", 0, "Shaders/meshesTest_ps.hlsl", false, 
+        CVec < CStr >( { "POSITION", "COLOR", "TEXCOORD" } ), 0, 0, 0, 0, 0 );
 
     ShadersManager::CreateFromFiles( "particle_halo", "Shaders/particle_halo_vs.hlsl", 0, "Shaders/particle_halo_ps.hlsl", false, CCRefVec < CStr >(), 0, 0, 0, 0, 0 );
 
@@ -518,6 +531,11 @@ void LoopFunc()
             RendererGlobals::MainBloom.FlushGlowMap();
 
             //PostProcess::Private::Draw();
+
+			if( RendererGlobals::is_UseSuperSampling )
+			{
+				RendererGlobals::MainBloom.FlushToRT( RendererGlobals::i_MainRenderTargetView );
+			}
 
             RendererGlobals::i_SwapChain->Present( 1, 0 );
 
@@ -739,8 +757,8 @@ void OnResize()
 
 	D3D11_TEXTURE2D_DESC depthStencilDesc;
 
-	depthStencilDesc.Width     = Globals::Width;
-	depthStencilDesc.Height    = Globals::Height;
+	depthStencilDesc.Width     = RendererGlobals::RenderingWidth;
+	depthStencilDesc.Height    = RendererGlobals::RenderingHeight;
 	depthStencilDesc.MipLevels = 1;
 	depthStencilDesc.ArraySize = 1;
 	depthStencilDesc.Format    = DXGI_FORMAT_D32_FLOAT;
@@ -768,6 +786,27 @@ void OnResize()
 	RendererGlobals::o_ScreenViewport.MaxDepth = 1.f;
 
     RendererGlobals::SetViewports( 1, &RendererGlobals::o_ScreenViewport );
+
+	if( RendererGlobals::is_UseSuperSampling )
+	{
+		D3D11_TEXTURE2D_DESC textureDesc;
+		textureDesc.Width     = RendererGlobals::RenderingWidth;
+		textureDesc.Height    = RendererGlobals::RenderingHeight;
+		textureDesc.MipLevels = 1;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format    = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.SampleDesc.Count   = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Usage          = D3D11_USAGE_DEFAULT;
+		textureDesc.BindFlags      = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		textureDesc.CPUAccessFlags = 0; 
+		textureDesc.MiscFlags      = 0;
+		
+		COMUniquePtr < ID3D11Texture2D > texture;
+		DXHRCHECK( RendererGlobals::i_Device->CreateTexture2D( &textureDesc, 0, texture.AddrModifiable() ) );
+		DXHRCHECK( RendererGlobals::i_Device->CreateShaderResourceView( texture, 0, &RendererGlobals::i_SuperSampleSRV ) );
+		DXHRCHECK( RendererGlobals::i_Device->CreateRenderTargetView( texture, 0, &RendererGlobals::i_SuperSampleRTV ) );
+	}
 }
 
 static void ToggleRendering()
@@ -1057,6 +1096,8 @@ LRESULT WINAPI MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 			Globals::Width *= 2;
 		}
         Globals::Height = ::GetSystemMetrics( SM_CYSCREEN );
+		RendererGlobals::RenderingWidth = RendererGlobals::is_UseSuperSampling ? Globals::Width * 2 : Globals::Width;
+		RendererGlobals::RenderingHeight = RendererGlobals::is_UseSuperSampling ? Globals::Height * 2 : Globals::Height;
         OnResize();
 		return 0;
 

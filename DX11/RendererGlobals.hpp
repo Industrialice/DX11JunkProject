@@ -17,6 +17,8 @@ namespace RendererGlobals
 	DX11_EXPORT extern ID3D11DeviceContext *i_ImContext;
 	DX11_EXPORT extern IDXGISwapChain *i_SwapChain;
 	DX11_EXPORT extern ID3D11Texture2D *i_DepthStencilBuffer;
+	DX11_EXPORT extern ID3D11RenderTargetView *i_SuperSampleRTV;
+	DX11_EXPORT extern ID3D11ShaderResourceView *i_SuperSampleSRV;
 	DX11_EXPORT extern ID3D11RenderTargetView *i_MainRenderTargetView;
     DX11_EXPORT extern ID3D11ShaderResourceView *i_MainSRV;
 	DX11_EXPORT extern ID3D11DepthStencilView *i_DepthStencilView;
@@ -24,6 +26,8 @@ namespace RendererGlobals
     DX11_EXPORT extern ID3D11RasterizerState *i_RS;
     DX11_EXPORT extern ID3D11BlendState *i_NoBlend;
     DX11_EXPORT extern ID3D11DepthStencilState *i_DepthStencilDefault;
+	DX11_EXPORT extern bln is_UseSuperSampling;
+	DX11_EXPORT extern ui32 RenderingWidth, RenderingHeight;
 
     DX11_EXPORT extern LayoutsManager DefLayoutsManager;
 

@@ -413,7 +413,7 @@ void TheTest::Create()
 
 	ReloadParticleTests();
 
-	//return;
+	return;
 
     static SGeometry o_flattn;
     Geometry::FlatTN( &o_flattn );

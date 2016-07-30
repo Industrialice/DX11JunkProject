@@ -12,14 +12,17 @@ struct SVsOut
 {
 	float4 position : SV_Position;
 	float2 texCoord : TEXCOORD;
-    float4 color : COLOR;
+    float3 color : COLOR;
 };
 
+/*  don't forget to change the same struct in vs.hlsl  */
 struct Particle
 {
 	float3 position;
-	float currentSize;
+	float _padding0;
 	float4 color;
+	float2 size_or_texcoord;
+	float2 _padding1;
 };
 
 StructuredBuffer < Particle > ParticleBuffer : register(t0);
@@ -27,6 +30,9 @@ StructuredBuffer < Particle > ParticleBuffer : register(t0);
 struct ParticleFrame
 {
 	float4x4 trans;
+	float2 particleScale;
+	float _padding0;
+	float _padding1;
 };
 
 StructuredBuffer < ParticleFrame > ParticleBufferFrame : register(t1);
@@ -41,7 +47,7 @@ SVsOut VS( uint vertexId : SV_VertexID )
     float2 tex = float2( vertex >> 1, vertex & 1 );
     float2 pos = float2( -0.5f, -0.5f ) + tex;
 	
-	float size = ParticleBuffer[ index ].currentSize;
+	float2 size = ParticleBuffer[ index ].size_or_texcoord * ParticleBufferFrame[ index ].particleScale;
 	float3 loc = ParticleBuffer[ index ].position + ParticleBufferFrame[ index ].trans[3].xyz;
 	float3 up = YVec;
 	float3 toCamera = normalize( EyePos - loc );
@@ -57,7 +63,7 @@ SVsOut VS( uint vertexId : SV_VertexID )
 	
 	outputVertex.position = mul( float4( posW, 1 ), VP );
     outputVertex.texCoord = tex;
-    outputVertex.color = ParticleBuffer[ index ].color;
+    outputVertex.color = ParticleBuffer[ index ].color.rgb * ParticleBuffer[ index ].color.a;
 	
 	return outputVertex;
 }

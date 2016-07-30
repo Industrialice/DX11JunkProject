@@ -43,6 +43,7 @@ using namespace StdLib;
 #include <unordered_map>
 #include <map>
 #include <memory>
+#include <functional>
 
 namespace std 
 {
@@ -63,11 +64,13 @@ template < typename Type > inline void PTCOMDeleter( Type *object )
 	}
 }
 
-struct alignas(32) SParticle
+struct SParticle
 {
 	vec3 position;
-	f32 size;
+	f32 _padding0;
 	f128color color;
+	vec2 size_or_texcoord;
+	vec2 _padding1;
 };
 
 inline bln CompileShader( const wchar_t *path, std::shared_ptr < ID3D11ComputeShader > *ptr )

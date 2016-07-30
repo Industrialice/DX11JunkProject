@@ -110,20 +110,9 @@ void FilloutEffects()
 	auto whirlGlobal = []
 	{
 		WhirlEffect::WhirlData data;
-		data.rotVec.data = vec3( 0, 0.25, 1 );
-		data.rotVec.offsetMin = vec3( -0.02, -0.02, -0.15 );
-		LiceMath::Vec3ScaleInplace( &data.rotVec.offsetMin, 0.1f );
-		LiceMath::Vec3ScaleInplace( &data.rotVec.offsetMax, 0.1f );
-		data.rotVec.offsetMax = vec3( 0.02, 0.02, 0.15 );
-		data.rotSpeeds.data = vec3( 0, 0.25, 0 );
-		data.rotSpeeds.offsetMin = vec3( 0, 0, 0 );
-		data.rotSpeeds.offsetMax = vec3( 0, 0, 0 );
-		data.rotSpeedMult = Funcs::RandomRangeF32( 0.5, 1.5 );
-		data.curRot.data = vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 );
-		data.curRot.offsetMin = vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 );
-		data.curRot.offsetMax = vec3( Funcs::RandomFluctuateF32( 0.05, 0.15 ), Funcs::RandomRangeF32( f32_pi, f32_pi ), 0 );
-		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMin, 0.25f );
-		LiceMath::Vec3ScaleInplace( &data.curRot.offsetMax, 0.25f );
+		data.rotVec = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.25, 1 ), vec3( -0.02, -0.02, -0.15 ), vec3( 0.02, 0.02, 0.15 ), 1.f } );
+		data.rotSpeeds = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.25, 0 ), vec3( 0, 0, 0 ), vec3( 0, 0, 0 ), ExpRand( 0.25, 2.5 ) } );
+		data.curRot = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, Funcs::RandomRangeF32( 0, f32_pi * 2 ), 0 ), vec3( 0, Funcs::RandomRangeF32( 0, 0 ), 0 ), vec3( Funcs::RandomFluctuateF32( 0.05, 0.15 ), Funcs::RandomRangeF32( f32_pi, f32_pi ), 0 ), 0.1f } );
 		return data;
 	};
 	AddEffect < WhirlEffect, WhirlEffect::WhirlData >( "whirl_global", whirlGlobal, whirlCS );
@@ -131,16 +120,9 @@ void FilloutEffects()
 	auto whirlLocal = []
 	{
 		WhirlEffect::WhirlData data;
-		data.rotVec.data = vec3( 0, 0.05, 0 );
-		data.rotVec.offsetMin = vec3( -0.05, -0.05, -0.05 );
-		data.rotVec.offsetMax = vec3( 0.05, 0.05, 0.05 );
-		data.rotVec.scale = 0.1f;
-		data.rotSpeeds.data = vec3( 0, 0, 1 );
-		data.rotSpeeds.offsetMin = vec3( -0.25, -0.25, -0.25 );
-		data.rotSpeeds.offsetMax = vec3( 0.25, 0.25, 0.25 );
-		data.curRot.offsetMin = vec3( 0, 0, -f32_pi );
-		data.curRot.offsetMax = vec3( 0, 0, f32_pi );
-		data.curRot.scale = 0.1f;
+		data.rotVec = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0.05, 0 ), vec3( -0.05, -0.05, -0.05 ), vec3( 0.05, 0.05, 0.05 ), 1.f } );
+		data.rotSpeeds = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0, 1 ), vec3( -0.25, -0.25, -0.25 ), vec3( 0.25, 0.25, 0.25 ), 1.0f } );
+		data.curRot = std::bind( GetDataWithExpRand, Vec3WithRand{ vec3( 0, 0, 0 ), vec3( 0, 0, -f32_pi ), vec3( 0, 0, f32_pi ), 1.f } );
 		return data;
 	};
 	AddEffect < WhirlEffect, WhirlEffect::WhirlData >( "whirl_local", whirlLocal, whirlCS );
@@ -183,7 +165,7 @@ void FilloutEffects()
 		data.scale = vec3( 4, 2, 4 );
 		data.rotation = vec3( Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ), Funcs::RandomRangeF32( 0, f32_pi * 2 ) );
 		data.rotationSpeed = vec3( 0.1, 0.25, 0.01 );
-		data.strength = 0.025;
+		data.strength = vec3( 0.025 );
 		data.strictness = 0;
 		data.srv = VectorFieldSRV;
 		data.sampler = VectorFieldSamplerState;

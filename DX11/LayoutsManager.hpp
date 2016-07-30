@@ -3,7 +3,7 @@
 #include <CString.hpp>
 #include <CVector.hpp>
 
-class LayoutsManager
+class DX11_EXPORT LayoutsManager
 {
     CVec < CStr > _semantics;
     typedef ui16 SemanticIndex_t;
@@ -49,6 +49,9 @@ class LayoutsManager
     };
     CVec < ShaderInput > _shaderInputs;
 
+	LayoutsManager( const LayoutsManager & ) = delete;
+	LayoutsManager &operator = ( const LayoutsManager & ) = delete;
+
 public:
     class BufferDesc_t : CharPOD
     {
@@ -66,6 +69,8 @@ public:
         ShaderInputDesc_t( ui16 index = TypeDesc < decltype(index) >::max ) : index( index ) {}
         bln IsNull() const { return index == TypeDesc < decltype(index) >::max; }
     };
+
+	LayoutsManager() {}
 
     BufferDesc_t CompileBufferDesc( CCRefVec < VertexBufferFieldDesc > fieldDescs, ui8 inputSlot = 0 );  //  input order doesn't matter, check IsNull after the call
     BufferDesc_t UniteCompiledBufferDescs( CCRefVec < BufferDesc_t > compiledBufferDescs, ui8 startInputSlot = 0 );  //  will increase input slot by one for every new buffer desc
